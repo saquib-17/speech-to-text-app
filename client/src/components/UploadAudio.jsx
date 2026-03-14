@@ -2,6 +2,9 @@ import { useState, useRef } from "react";
 import { Upload, FileAudio, X, Zap, AlertCircle, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".webm"];
+
 function UploadAudio({ setTranscript, setIsLoading, userId }) {
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
@@ -16,8 +19,24 @@ function UploadAudio({ setTranscript, setIsLoading, userId }) {
   const validateAndSetFile = (selectedFile) => {
     if (!selectedFile) return;
     
+    // Check extension
+    const extension = selectedFile.name.toLowerCase().substring(selectedFile.name.lastIndexOf("."));
+    if (!ALLOWED_EXTENSIONS.includes(extension)) {
+      setError(`Unsupported Extension: Use ${ALLOWED_EXTENSIONS.join(", ").toUpperCase()}`);
+      setFile(null);
+      return;
+    }
+
+    // Check MIME type
     if (!selectedFile.type.startsWith("audio/")) {
-      setError("Input Error: Verify file signature (MP3/WAV/M4A).");
+      setError("Invalid Signature: Verified audio file required.");
+      setFile(null);
+      return;
+    }
+
+    // Check Size
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setError(`Payload Overload: Maximum size limit is 10MB.`);
       setFile(null);
       return;
     }

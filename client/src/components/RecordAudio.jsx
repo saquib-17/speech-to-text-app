@@ -52,7 +52,12 @@ function RecordAudio({ setTranscript, isRecording, handleRecord, setIsLoading, u
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => {
+          track.stop();
+          mediaRecorderRef.current.stream.removeTrack(track);
+        });
+      }
     }
   };
 
@@ -90,7 +95,11 @@ function RecordAudio({ setTranscript, isRecording, handleRecord, setIsLoading, u
         setError(result.message || "Transcription Error: Signal loss during relay.");
       }
     } catch (err) {
-      setError("Network Fault: Node synchronization failed.");
+      if (err.name === "AbortError") {
+        setError("Network Interrupt: Connection lost during relay.");
+      } else {
+        setError("Network Fault: Node synchronization failed.");
+      }
     } finally {
       setIsLoading(false);
     }

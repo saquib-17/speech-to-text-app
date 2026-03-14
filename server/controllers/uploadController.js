@@ -8,8 +8,10 @@ import Transcription from "../models/transcriptionModel.js";
 // @access  Public
 export const uploadAudio = asyncHandler(async (req, res) => {
     if (!req.file) {
-        res.status(400);
-        throw new Error("Please upload an audio file");
+        return res.status(400).json({
+            success: false,
+            message: "Payload Missing: No audio file detected in the request."
+        });
     }
 
     const filePath = req.file.path;
@@ -29,8 +31,22 @@ export const uploadAudio = asyncHandler(async (req, res) => {
 
         // 3. Return response
         res.status(201).json({
-            message: "Transcription successful",
+            success: true,
+            message: "Transcription node established successfully.",
             data: transcription,
+        });
+    } catch (error) {
+        console.error("Transcription Controller Error:", error);
+
+        // Handle specific Deepgram or service errors
+        const errorMessage = error.message.includes("Deepgram")
+            ? "Engine Error: Deepgram API rejected the processing request."
+            : "Processing Error: An internal fault occurred during synthesis.";
+
+        res.status(500).json({
+            success: false,
+            message: errorMessage,
+            error: process.env.NODE_ENV === "development" ? error.message : undefined
         });
     } finally {
         // 4. Cleanup: Delete local file after processing (even if transcription fails)

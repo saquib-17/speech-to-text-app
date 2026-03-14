@@ -93,7 +93,7 @@ function App() {
               <BrainCircuit className="text-white" size={20} />
             </div>
             <span className="text-xl font-black tracking-tight text-white uppercase italic">
-              Lexi<span className="text-indigo-500">Node</span>
+              Vox<span className="text-indigo-500">Scribe</span>
             </span>
           </div>
           

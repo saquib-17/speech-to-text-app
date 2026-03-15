@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Upload, FileText, Sparkles, BrainCircuit, Settings, Layout, Zap, Menu, X } from "lucide-react";
+import { Mic, Upload, FileText, Sparkles, BrainCircuit, Layout, Zap, Menu, X } from "lucide-react";
 import UploadAudio from "./components/UploadAudio";
 import RecordAudio from "./components/RecordAudio";
 import TranscriptionBox from "./components/TranscriptionBox";
@@ -17,6 +17,7 @@ function App() {
   const [currentView, setCurrentView] = useState("studio");
   const [session, setSession] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -86,14 +87,14 @@ function App() {
   return (
     <div className="min-h-screen selection:bg-indigo-500/30">
       {/* V3 Navigation: Clean & High Contrast */}
-      <nav className="fixed top-0 w-full z-50 nav-blur px-8 py-5">
+      <nav className="fixed top-0 w-full z-50 nav-blur px-4 py-4 md:px-8 md:py-5">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5 group cursor-pointer">
-            <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:bg-indigo-500 transition-colors">
-              <BrainCircuit className="text-white" size={20} />
+          <div className="flex items-center gap-2 md:gap-2.5 group cursor-pointer">
+            <div className="w-7 h-7 md:w-9 md:h-9 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:bg-indigo-500 transition-colors">
+              <BrainCircuit className="text-white" size={16} />
             </div>
-            <span className="text-xl font-black tracking-tight text-white uppercase italic">
-              Vox<span className="text-indigo-500">Scribe</span>
+            <span className="text-lg md:text-xl font-black tracking-tight text-white uppercase italic">
+              Speech<span className="text-indigo-500">Scribe</span>
             </span>
           </div>
           
@@ -101,7 +102,11 @@ function App() {
             {session && (
               <>
                 <button 
-                  onClick={() => setCurrentView("studio")}
+                  onClick={() => {
+                    setCurrentView("studio");
+                    setIsReviewMode(false);
+                    setTranscript("");
+                  }}
                   className={`hover:text-white transition-colors border-b-2 pb-1 ${
                     currentView === "studio" ? "text-white border-indigo-500" : "border-transparent hover:border-indigo-500"
                   }`}
@@ -121,9 +126,6 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="hidden md:block p-2 text-slate-500 hover:text-white transition-colors">
-              <Settings size={20} />
-            </button>
             <div className="w-9 h-9 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center text-indigo-400 font-bold text-xs">
               {session ? session.user.email?.[0].toUpperCase() : "JD"}
             </div>
@@ -195,11 +197,10 @@ function App() {
             AI Pipeline Ready
           </div>
           <h1 className="text-3xl md:text-5xl font-black mb-3 md:mb-4 tracking-tight text-white leading-tight">
-            Advanced <span className="text-indigo-500">Speech Synthesis</span> & Extraction
+            AI <span className="text-indigo-500">Speech Recognition</span> & Transcription
           </h1>
           <p className="text-slate-500 text-sm md:text-base max-w-xl font-medium">
-            Deploy neural transcription models for high-fidelity audio analysis. 
-            Select an input source below to begin processing.
+            Convert spoken audio into accurate text using advanced speech recognition. Select an input source to start transcription.
           </p>
         </div>
 
@@ -211,105 +212,127 @@ function App() {
           </div>
         ) : currentView === "studio" ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-            {/* Left: Operations Panel */}
-            <div className="lg:col-span-5 space-y-6 md:space-y-8">
-              <div className="bg-slate-900/50 p-1.5 rounded-2xl border border-white/5 flex gap-1">
-                <button
-                  onClick={() => setActiveTab("upload")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-200 ${
-                    activeTab === "upload" 
-                      ? "bg-indigo-600 text-white shadow-xl" 
-                      : "text-slate-500 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  <Upload size={18} />
-                  <span className="text-xs font-black uppercase tracking-wider">Upload</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("record")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-200 ${
-                    activeTab === "record" 
-                      ? "bg-indigo-600 text-white shadow-xl" 
-                      : "text-slate-500 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  <Mic size={18} />
-                  <span className="text-xs font-black uppercase tracking-wider">Record</span>
-                </button>
-              </div>
-
-              <div className="card-clean p-8 min-h-[420px] shadow-2xl relative overflow-hidden">
-                 {/* Subtle background detail */}
-                <div className="absolute top-0 right-0 p-4 opacity-5">
-                  <Layout size={120} />
-                </div>
-
-                <AnimatePresence mode="wait">
-                  {activeTab === "upload" ? (
-                    <motion.div
-                      key="upload"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      <UploadAudio 
-                        setTranscript={handleTranscriptionSuccess} 
-                        setIsLoading={setIsLoading} 
-                        userId={session.user.id}
-                      />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="record"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      <RecordAudio
-                        setTranscript={handleTranscriptionSuccess}
-                        isRecording={isRecording}
-                        handleRecord={handleRecord}
-                        setIsLoading={setIsLoading}
-                        userId={session.user.id}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              
-              {isLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="p-6 rounded-2xl bg-indigo-600/10 border border-indigo-600/20 flex flex-col items-center gap-4 text-center"
-                >
-                  <div className="w-10 h-10 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
-                  <div className="space-y-1">
-                    <p className="text-indigo-400 font-black text-xs uppercase tracking-widest">Processing Node...</p>
-                    <p className="text-slate-500 text-[10px] font-bold">Neural network analysis in progress</p>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Right: Studio Viewer */}
-            <div className="lg:col-span-7 flex flex-col h-full mt-8 lg:mt-0">
-               <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Studio Output</h2>
-                </div>
-                {transcript && (
-                  <button 
-                    onClick={() => setTranscript("")}
-                    className="text-[10px] font-black text-slate-500 hover:text-rose-500 uppercase tracking-widest transition-colors"
+            {/* Left: Operations Panel - Hidden in Review Mode */}
+            {!isReviewMode && (
+              <div className="lg:col-span-5 space-y-6 md:space-y-8">
+                <div className="bg-slate-900/50 p-1.5 rounded-2xl border border-white/5 flex gap-1">
+                  <button
+                    onClick={() => setActiveTab("upload")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-200 ${
+                      activeTab === "upload" 
+                        ? "bg-indigo-600 text-white shadow-xl" 
+                        : "text-slate-500 hover:text-white hover:bg-white/5"
+                    }`}
                   >
-                    Terminate Output
+                    <Upload size={18} />
+                    <span className="text-xs font-black uppercase tracking-wider">Upload</span>
                   </button>
+                  <button
+                    onClick={() => setActiveTab("record")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-200 ${
+                      activeTab === "record" 
+                        ? "bg-indigo-600 text-white shadow-xl" 
+                        : "text-slate-500 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Mic size={18} />
+                    <span className="text-xs font-black uppercase tracking-wider">Record</span>
+                  </button>
+                </div>
+
+                <div className="card-clean p-8 min-h-[420px] shadow-2xl relative overflow-hidden">
+                   {/* Subtle background detail */}
+                  <div className="absolute top-0 right-0 p-4 opacity-5">
+                    <Layout size={120} />
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    {activeTab === "upload" ? (
+                      <motion.div
+                        key="upload"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        <UploadAudio 
+                          setTranscript={handleTranscriptionSuccess} 
+                          setIsLoading={setIsLoading} 
+                          userId={session.user.id}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="record"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        <RecordAudio
+                          setTranscript={handleTranscriptionSuccess}
+                          isRecording={isRecording}
+                          handleRecord={handleRecord}
+                          setIsLoading={setIsLoading}
+                          userId={session.user.id}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                
+                {isLoading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="p-6 rounded-2xl bg-indigo-600/10 border border-indigo-600/20 flex flex-col items-center gap-4 text-center"
+                  >
+                    <div className="w-10 h-10 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
+                    <div className="space-y-1">
+                      <p className="text-indigo-400 font-black text-xs uppercase tracking-widest">Processing Node...</p>
+                      <p className="text-slate-500 text-[10px] font-bold">Neural network analysis in progress</p>
+                    </div>
+                  </motion.div>
                 )}
               </div>
+            )}
 
-              <TranscriptionBox transcript={transcript} />
+            {/* Right: Studio Viewer */}
+            <div className={`${isReviewMode ? "lg:col-span-12" : "lg:col-span-7"} flex flex-col h-full mt-8 lg:mt-0`}>
+               <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${isReviewMode ? "bg-indigo-500" : "bg-emerald-500 animate-pulse"}`} />
+                  <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">
+                    {isReviewMode ? "Archive Review" : "Studio Output"}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-4">
+                  {isReviewMode && (
+                    <button 
+                      onClick={() => setIsReviewMode(false)}
+                      className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors flex items-center gap-2"
+                    >
+                      <Sparkles size={12} />
+                      Modify / Edit
+                    </button>
+                  )}
+                  {transcript && (
+                    <button 
+                      onClick={() => {
+                        setTranscript("");
+                        setIsReviewMode(false);
+                      }}
+                      className="text-[10px] font-black text-slate-500 hover:text-rose-500 uppercase tracking-widest transition-colors"
+                    >
+                      Terminate Output
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <TranscriptionBox 
+                transcript={transcript} 
+                isReviewMode={isReviewMode} 
+                onEdit={() => setIsReviewMode(false)}
+              />
             </div>
           </div>
         ) : (
@@ -337,6 +360,7 @@ function App() {
                     onClick={(t) => {
                       setTranscript(t.transcriptionText);
                       setCurrentView("studio");
+                      setIsReviewMode(true);
                     }} 
                     onDelete={handleDeleteHistory}
                   />

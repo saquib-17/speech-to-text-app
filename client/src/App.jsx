@@ -8,6 +8,7 @@ import HistoryCard from "./components/HistoryCard";
 import Auth from "./components/Auth";
 import { supabase } from "./supabaseClient";
 import confetti from "canvas-confetti";
+import { API_ENDPOINTS } from "./config";
 function App() {
   const [transcript, setTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -19,9 +20,18 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    // Attempt to get session but don't let a network timeout freeze the app
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+      } catch (err) {
+        console.error("Supabase unreachable during init:", err.message);
+        setSession(null);
+      }
+    };
+
+    initAuth();
 
     const {
       data: { subscription },
@@ -41,7 +51,7 @@ function App() {
   const fetchHistory = async () => {
     if (!session) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/history?userId=${session.user.id}`);
+      const response = await fetch(`${API_ENDPOINTS.HISTORY}?userId=${session.user.id}`);
       const result = await response.json();
       if (result.success) {
         setHistory(result.data);
@@ -53,7 +63,7 @@ function App() {
 
   const handleDeleteHistory = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/history/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.HISTORY}/${id}`, {
         method: "DELETE",
       });
       const result = await response.json();
@@ -131,7 +141,15 @@ function App() {
             </div>
             {session && (
               <button 
-                onClick={() => supabase.auth.signOut()}
+                onClick={async () => {
+                  try {
+                    await supabase.auth.signOut();
+                  } catch (err) {
+                    console.error("Network error during signout, clearing local state anyway");
+                  }
+                  setSession(null);
+                  setIsMobileMenuOpen(false);
+                }}
                 className="hidden md:block text-[10px] font-black text-slate-500 hover:text-rose-500 uppercase tracking-widest transition-colors ml-2"
               >
                 Logout
@@ -175,11 +193,17 @@ function App() {
               >
                 Archives
               </button>
-              <button className="text-left text-sm font-bold uppercase tracking-widest p-2 text-slate-400 hover:bg-white/5 hover:text-white rounded-lg flex items-center gap-2">
-                <Settings size={16} /> Settings
-              </button>
+
               <button 
-                onClick={() => { supabase.auth.signOut(); setIsMobileMenuOpen(false); }}
+                onClick={async () => { 
+                  try {
+                    await supabase.auth.signOut();
+                  } catch (err) {
+                    console.error("Network error during signout, clearing local state anyway");
+                  }
+                  setSession(null); 
+                  setIsMobileMenuOpen(false); 
+                }}
                 className="text-left text-sm font-bold uppercase tracking-widest p-2 text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg mt-2"
               >
                 Logout

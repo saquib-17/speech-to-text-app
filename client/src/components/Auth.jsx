@@ -25,7 +25,14 @@ function Auth() {
         if (error) throw error;
       }
     } catch (error) {
-      setMessage({ type: "error", text: error.message });
+      if (error.message === "Failed to fetch") {
+        setMessage({ 
+          type: "error", 
+          text: "Network Blocked: Computer cannot reach Supabase servers. Try a mobile hotspot or VPN." 
+        });
+      } else {
+        setMessage({ type: "error", text: error.message });
+      }
     } finally {
       setLoading(false);
     }

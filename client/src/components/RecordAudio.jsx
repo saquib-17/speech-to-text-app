@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Save, RotateCcw, Radio, Activity, Zap, AlertCircle } from "lucide-react";
+import { Mic, Square, Save, RotateCcw, AlertCircle, Radio } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_ENDPOINTS } from "../config";
 
 function RecordAudio({ setTranscript, isRecording, handleRecord, setIsLoading, userId }) {
   const [audioURL, setAudioURL] = useState(null);
@@ -82,7 +83,7 @@ function RecordAudio({ setTranscript, isRecording, handleRecord, setIsLoading, u
     if (userId) formData.append("userId", userId);
 
     try {
-      const response = await fetch("http://localhost:5000/api/upload", {
+      const response = await fetch(API_ENDPOINTS.UPLOAD, {
         method: "POST",
         body: formData,
       });

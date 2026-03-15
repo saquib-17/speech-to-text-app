@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
-import { Upload, FileAudio, X, Zap, AlertCircle, ShieldCheck } from "lucide-react";
+import { Upload, X, FileAudio, AlertCircle, ShieldCheck, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_ENDPOINTS } from "../config";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".webm"];
@@ -54,7 +55,7 @@ function UploadAudio({ setTranscript, setIsLoading, userId }) {
     if (userId) formData.append("userId", userId);
 
     try {
-      const response = await fetch("http://localhost:5000/api/upload", {
+      const response = await fetch(API_ENDPOINTS.UPLOAD, {
         method: "POST",
         body: formData,
       });

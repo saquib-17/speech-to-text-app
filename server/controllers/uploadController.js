@@ -57,8 +57,8 @@ export const uploadAudio = asyncHandler(async (req, res) => {
 });
 
 // @desc    Get all transcriptions for a user
-// @route   GET /api/transcriptions
-// @access  Public (Will restrict with Auth later)
+// @route   GET /api/history
+// @access  Public
 export const getTranscriptions = asyncHandler(async (req, res) => {
     const { userId } = req.query;
 
@@ -77,15 +77,22 @@ export const getTranscriptions = asyncHandler(async (req, res) => {
 
 // @desc    Delete a transcription
 // @route   DELETE /api/history/:id
-// @access  Public (Will restrict with Auth later)
+// @access  Public
 export const deleteTranscription = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { userId } = req.query;
 
     const transcription = await Transcription.findById(id);
 
     if (!transcription) {
         res.status(404);
         throw new Error("Transcription not found");
+    }
+
+    // Ownership check: only the creator can delete their own record
+    if (transcription.userId && userId && transcription.userId !== userId) {
+        res.status(403);
+        throw new Error("Access denied: You do not own this record.");
     }
 
     await transcription.deleteOne();

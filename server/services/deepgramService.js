@@ -1,37 +1,32 @@
+import { DeepgramClient } from "@deepgram/sdk";
 import fs from "fs";
-import fetch from "node-fetch";
 
 /**
- * Transcribes audio using Deepgram Nova-2 model
+ * Transcribes audio using Deepgram Nova-2 via the official SDK
  * @param {string} filePath - Path to the audio file
  * @param {string} mimeType - MIME type of the audio file
  * @returns {Promise<string>} - Transcription text
  */
 export const transcribeAudio = async (filePath, mimeType = "audio/mpeg") => {
-  try {
-    const fileStream = fs.createReadStream(filePath);
+  const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY });
 
-    const response = await fetch(
-      "https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
-          "Content-Type": mimeType,
-        },
-        body: fileStream,
-      }
-    );
+  const audioBuffer = fs.readFileSync(filePath);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.err_msg || "Deepgram API Error");
+  const response = await deepgram.listen.v1.media.transcribeFile(
+    audioBuffer,
+    {
+      model: "nova-2",
+      smart_format: true,
+      punctuate: true,
+      paragraphs: true,
     }
+  );
 
-    const data = await response.json();
-    return data.results.channels[0].alternatives[0].transcript;
-  } catch (error) {
-    console.error("Deepgram Service Error:", error);
-    throw error;
-  }
+  // The response structure in this SDK version is: { data, rawResponse }
+  // We want data.results.channels[0].alternatives[0].transcript
+  const transcript =
+    response.data?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+
+  return transcript;
 };
+

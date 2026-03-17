@@ -103,7 +103,7 @@ function UploadAudio({ setTranscript, setIsLoading, userId }) {
           <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center text-indigo-400 mb-6 border border-white/5">
             <Upload size={28} />
           </div>
-          <h3 className="text-lg font-black text-white mb-2 uppercase tracking-wide">Select Module</h3>
+          <h3 className="text-lg font-black text-white mb-2 uppercase tracking-wide">Select File</h3>
           <p className="text-[11px] text-slate-500 font-black uppercase tracking-[0.2em]">Drag system files here</p>
         </motion.div>
       ) : (
@@ -157,7 +157,7 @@ function UploadAudio({ setTranscript, setIsLoading, userId }) {
         className="btn-primary w-full py-4 text-[12px] font-black uppercase tracking-[0.3em]"
       >
         <Zap size={16} />
-        Init Transcription
+        Start Transcription
       </button>
     </div>
   );

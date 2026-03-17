@@ -1,23 +1,23 @@
 import mongoose from "mongoose";
 
-const transcriptionSchema = new mongoose.Schema({
-  audioFile: {
-    type: String,
-    required: true,
+const transcriptionSchema = new mongoose.Schema(
+  {
+    audioFile: {
+      type: String,
+      required: true,
+    },
+    transcriptionText: {
+      type: String,
+      default: "",
+    },
+    userId: {
+      type: String,
+      index: true, // speeds up per-user history queries
+    },
   },
-  transcriptionText: {
-    type: String,
-  },
-  userId: {
-    type: String,
-    required: false, // Set to true after front-end auth is solid
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { timestamps: true } // auto-adds createdAt + updatedAt
+);
 
 const Transcription = mongoose.model("Transcription", transcriptionSchema);
 
-export default Transcription;
+export default Transcription;

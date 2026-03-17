@@ -104,39 +104,40 @@ function TranscriptionBox({ transcript, isReviewMode, onEdit }) {
   return (
     <div className={`relative ${isReviewMode ? "min-h-[600px]" : "h-[400px] md:h-full md:flex-1 md:max-h-[500px]"}`}>
       <div className="card-clean h-full flex flex-col overflow-hidden bg-slate-900/40">
-        {/* V3 Header Toolbar */}
-        <div className="px-6 py-4 border-b border-white/5 bg-slate-950/40 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-1.5 h-1.5 rounded-full ${isReviewMode ? "bg-indigo-500" : "bg-emerald-500 animate-pulse"}`} />
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+        {/* Header Toolbar - responsive wrap */}
+        <div className="px-4 py-3 border-b border-white/5 bg-slate-950/40 flex flex-wrap items-center gap-2 justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={`w-1.5 h-1.5 flex-shrink-0 rounded-full ${isReviewMode ? "bg-indigo-500" : "bg-emerald-500 animate-pulse"}`} />
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">
               {isReviewMode ? "Historical Archive" : "Live Stream"}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {isReviewMode && (
               <button
                 onClick={onEdit}
-                className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all border border-indigo-500/10 flex items-center gap-2 px-3"
+                className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all border border-indigo-500/10 flex items-center gap-1.5 px-2.5"
               >
-                <Edit3 size={14} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Edit Transcription</span>
+                <Edit3 size={13} />
+                <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">Edit</span>
               </button>
             )}
             <button
               onClick={copyToClipboard}
-              className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-white/5"
+              className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-white/5 flex items-center gap-1.5 px-2.5"
               title="Copy to Clipboard"
             >
-              {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+              {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+              <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline whitespace-nowrap">Copy</span>
             </button>
             <button
               onClick={downloadPDF}
-              className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all border border-indigo-500/10 flex items-center gap-2 px-3"
+              className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all border border-indigo-500/10 flex items-center gap-1.5 px-2.5"
               title="Download PDF Report"
             >
-              <FileDown size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Download PDF</span>
+              <FileDown size={14} />
+              <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline whitespace-nowrap">PDF</span>
             </button>
           </div>
         </div>
@@ -162,11 +163,6 @@ function TranscriptionBox({ transcript, isReviewMode, onEdit }) {
                 animate={{ opacity: 1 }}
                 className="space-y-8"
               >
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-                  <Activity size={10} />
-                  Confidence: 99.1%
-                </div>
-                
                 <div className="prose prose-invert max-w-none">
                    <p className="text-slate-100 leading-[2] text-lg font-bold tracking-tight bg-clip-text">
                     {displayText}

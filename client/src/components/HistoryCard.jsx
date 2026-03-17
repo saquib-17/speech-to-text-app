@@ -25,7 +25,9 @@ function HistoryCard({ transcription, onClick, onDelete }) {
         </div>
         <div className="min-w-0">
           <h4 className="text-sm font-bold text-white truncate group-hover:text-indigo-400 transition-colors">
-            {transcription.audioFile}
+            {transcription.transcriptionText
+              ? `${transcription.transcriptionText.slice(0, 72)}${transcription.transcriptionText.length > 72 ? "…" : ""}`
+              : transcription.audioFile}
           </h4>
           <div className="flex items-center gap-3 mt-1">
             <span className="flex items-center gap-1 text-[10px] font-black text-slate-500 uppercase tracking-widest">

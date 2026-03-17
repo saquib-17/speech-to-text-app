@@ -5,10 +5,10 @@ import UploadAudio from "./components/UploadAudio";
 import RecordAudio from "./components/RecordAudio";
 import TranscriptionBox from "./components/TranscriptionBox";
 import HistoryCard from "./components/HistoryCard";
-import Auth from "./components/Auth";
-import { supabase } from "./supabaseClient";
+import { getAnonUserId } from "./anonUser";
 import confetti from "canvas-confetti";
 import { API_ENDPOINTS } from "./config";
+
 function App() {
   const [transcript, setTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -16,42 +16,19 @@ function App() {
   const [activeTab, setActiveTab] = useState("upload");
   const [history, setHistory] = useState([]);
   const [currentView, setCurrentView] = useState("studio");
-  const [session, setSession] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false);
+
+  // Get or create a persistent anonymous user ID for this browser
+  const userId = getAnonUserId();
+
   useEffect(() => {
-    // Attempt to get session but don't let a network timeout freeze the app
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-      } catch (err) {
-        console.error("Supabase unreachable during init:", err.message);
-        setSession(null);
-      }
-    };
-
-    initAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    fetchHistory();
   }, []);
 
-  useEffect(() => {
-    if (session) {
-      fetchHistory();
-    }
-  }, [session]);
-
   const fetchHistory = async () => {
-    if (!session) return;
     try {
-      const response = await fetch(`${API_ENDPOINTS.HISTORY}?userId=${session.user.id}`);
+      const response = await fetch(`${API_ENDPOINTS.HISTORY}?userId=${userId}`);
       const result = await response.json();
       if (result.success) {
         setHistory(result.data);
@@ -63,12 +40,11 @@ function App() {
 
   const handleDeleteHistory = async (id) => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.HISTORY}/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.HISTORY}/${id}?userId=${userId}`, {
         method: "DELETE",
       });
       const result = await response.json();
       if (result.success) {
-        // Optimistically remove from UI
         setHistory(prev => prev.filter(item => item._id !== id));
       } else {
         console.error("Failed to delete from server:", result.message);
@@ -85,7 +61,7 @@ function App() {
   const handleTranscriptionSuccess = (text) => {
     setTranscript(text);
     setIsLoading(false);
-    fetchHistory(); // Refresh history
+    fetchHistory();
     confetti({
       particleCount: 100,
       spread: 70,
@@ -96,10 +72,17 @@ function App() {
 
   return (
     <div className="min-h-screen selection:bg-indigo-500/30">
-      {/* V3 Navigation: Clean & High Contrast */}
+      {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 nav-blur px-4 py-4 md:px-8 md:py-5">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-2.5 group cursor-pointer">
+          <div 
+            onClick={() => {
+              setCurrentView("studio");
+              setIsReviewMode(false);
+              setTranscript("");
+            }}
+            className="flex items-center gap-2 md:gap-2.5 group cursor-pointer"
+          >
             <div className="w-7 h-7 md:w-9 md:h-9 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:bg-indigo-500 transition-colors">
               <BrainCircuit className="text-white" size={16} />
             </div>
@@ -107,77 +90,50 @@ function App() {
               Speech<span className="text-indigo-500">Scribe</span>
             </span>
           </div>
-          
+
+          {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-10 text-[13px] font-bold uppercase tracking-widest text-slate-500">
-            {session && (
-              <>
-                <button 
-                  onClick={() => {
-                    setCurrentView("studio");
-                    setIsReviewMode(false);
-                    setTranscript("");
-                  }}
-                  className={`hover:text-white transition-colors border-b-2 pb-1 ${
-                    currentView === "studio" ? "text-white border-indigo-500" : "border-transparent hover:border-indigo-500"
-                  }`}
-                >
-                  Studio
-                </button>
-                <button 
-                  onClick={() => setCurrentView("history")}
-                  className={`hover:text-white transition-colors border-b-2 pb-1 ${
-                    currentView === "history" ? "text-white border-indigo-500" : "border-transparent hover:border-indigo-500"
-                  }`}
-                >
-                  Archives
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => {
+                setCurrentView("studio");
+                setIsReviewMode(false);
+                setTranscript("");
+              }}
+              className={`hover:text-white transition-colors border-b-2 pb-1 ${
+                currentView === "studio" ? "text-white border-indigo-500" : "border-transparent hover:border-indigo-500"
+              }`}
+            >
+              Studio
+            </button>
+            <button
+              onClick={() => setCurrentView("history")}
+              className={`hover:text-white transition-colors border-b-2 pb-1 ${
+                currentView === "history" ? "text-white border-indigo-500" : "border-transparent hover:border-indigo-500"
+              }`}
+            >
+              Archives
+            </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center text-indigo-400 font-bold text-xs">
-              {session ? session.user.email?.[0].toUpperCase() : "JD"}
-            </div>
-            {session && (
-              <button 
-                onClick={async () => {
-                  try {
-                    await supabase.auth.signOut();
-                  } catch (err) {
-                    console.error("Network error during signout, clearing local state anyway");
-                  }
-                  setSession(null);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="hidden md:block text-[10px] font-black text-slate-500 hover:text-rose-500 uppercase tracking-widest transition-colors ml-2"
-              >
-                Logout
-              </button>
-            )}
-            
-            {/* Mobile Menu Toggle */}
-            {session && (
-              <button 
-                className="md:hidden p-2 text-slate-400 hover:text-white transition-colors ml-2"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            )}
-          </div>
+          {/* Mobile Menu Toggle */}
+          <button
+            className="md:hidden p-2 text-slate-400 hover:text-white transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
 
         {/* Mobile Dropdown Menu */}
         <AnimatePresence>
-          {isMobileMenuOpen && session && (
+          {isMobileMenuOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden mt-4 pt-4 border-t border-white/10 flex flex-col gap-4"
             >
-              <button 
+              <button
                 onClick={() => { setCurrentView("studio"); setIsMobileMenuOpen(false); }}
                 className={`text-left text-sm font-bold uppercase tracking-widest p-2 rounded-lg ${
                   currentView === "studio" ? "bg-indigo-500/10 text-indigo-400" : "text-slate-400 hover:bg-white/5 hover:text-white"
@@ -185,7 +141,7 @@ function App() {
               >
                 Studio
               </button>
-              <button 
+              <button
                 onClick={() => { setCurrentView("history"); setIsMobileMenuOpen(false); }}
                 className={`text-left text-sm font-bold uppercase tracking-widest p-2 rounded-lg ${
                   currentView === "history" ? "bg-indigo-500/10 text-indigo-400" : "text-slate-400 hover:bg-white/5 hover:text-white"
@@ -193,35 +149,20 @@ function App() {
               >
                 Archives
               </button>
-
-              <button 
-                onClick={async () => { 
-                  try {
-                    await supabase.auth.signOut();
-                  } catch (err) {
-                    console.error("Network error during signout, clearing local state anyway");
-                  }
-                  setSession(null); 
-                  setIsMobileMenuOpen(false); 
-                }}
-                className="text-left text-sm font-bold uppercase tracking-widest p-2 text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg mt-2"
-              >
-                Logout
-              </button>
             </motion.div>
           )}
         </AnimatePresence>
       </nav>
 
       <main className="pt-28 md:pt-32 pb-24 px-4 md:px-8 max-w-screen-xl mx-auto">
-        {/* Streamlined Hero */}
+        {/* Hero */}
         <div className="mb-10 md:mb-14">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] mb-4">
             <Zap size={12} />
             AI Pipeline Ready
           </div>
           <h1 className="text-3xl md:text-5xl font-black mb-3 md:mb-4 tracking-tight text-white leading-tight">
-            AI <span className="text-indigo-500">Speech Recognition</span> & Transcription
+            AI <span className="text-indigo-500">Speech Recognition</span> &amp; Transcription
           </h1>
           <p className="text-slate-500 text-sm md:text-base max-w-xl font-medium">
             Convert spoken audio into accurate text using advanced speech recognition. Select an input source to start transcription.
@@ -229,22 +170,17 @@ function App() {
         </div>
 
         {/* Workspace Layout */}
-        {/* Workspace Layout */}
-        {!session ? (
-          <div className="flex justify-center items-center min-h-[500px]">
-            <Auth />
-          </div>
-        ) : currentView === "studio" ? (
+        {currentView === "studio" ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-            {/* Left: Operations Panel - Hidden in Review Mode */}
+            {/* Left: Operations Panel */}
             {!isReviewMode && (
               <div className="lg:col-span-5 space-y-6 md:space-y-8">
                 <div className="bg-slate-900/50 p-1.5 rounded-2xl border border-white/5 flex gap-1">
                   <button
                     onClick={() => setActiveTab("upload")}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-200 ${
-                      activeTab === "upload" 
-                        ? "bg-indigo-600 text-white shadow-xl" 
+                      activeTab === "upload"
+                        ? "bg-indigo-600 text-white shadow-xl"
                         : "text-slate-500 hover:text-white hover:bg-white/5"
                     }`}
                   >
@@ -254,8 +190,8 @@ function App() {
                   <button
                     onClick={() => setActiveTab("record")}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-200 ${
-                      activeTab === "record" 
-                        ? "bg-indigo-600 text-white shadow-xl" 
+                      activeTab === "record"
+                        ? "bg-indigo-600 text-white shadow-xl"
                         : "text-slate-500 hover:text-white hover:bg-white/5"
                     }`}
                   >
@@ -265,7 +201,6 @@ function App() {
                 </div>
 
                 <div className="card-clean p-8 min-h-[420px] shadow-2xl relative overflow-hidden">
-                   {/* Subtle background detail */}
                   <div className="absolute top-0 right-0 p-4 opacity-5">
                     <Layout size={120} />
                   </div>
@@ -278,10 +213,10 @@ function App() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                       >
-                        <UploadAudio 
-                          setTranscript={handleTranscriptionSuccess} 
-                          setIsLoading={setIsLoading} 
-                          userId={session.user.id}
+                        <UploadAudio
+                          setTranscript={handleTranscriptionSuccess}
+                          setIsLoading={setIsLoading}
+                          userId={userId}
                         />
                       </motion.div>
                     ) : (
@@ -296,13 +231,13 @@ function App() {
                           isRecording={isRecording}
                           handleRecord={handleRecord}
                           setIsLoading={setIsLoading}
-                          userId={session.user.id}
+                          userId={userId}
                         />
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
-                
+
                 {isLoading && (
                   <motion.div
                     initial={{ opacity: 0 }}
@@ -321,7 +256,7 @@ function App() {
 
             {/* Right: Studio Viewer */}
             <div className={`${isReviewMode ? "lg:col-span-12" : "lg:col-span-7"} flex flex-col h-full mt-8 lg:mt-0`}>
-               <div className="flex items-center justify-between mb-4 px-2">
+              <div className="flex items-center justify-between mb-4 px-2">
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${isReviewMode ? "bg-indigo-500" : "bg-emerald-500 animate-pulse"}`} />
                   <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">
@@ -330,7 +265,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-4">
                   {isReviewMode && (
-                    <button 
+                    <button
                       onClick={() => setIsReviewMode(false)}
                       className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors flex items-center gap-2"
                     >
@@ -339,7 +274,7 @@ function App() {
                     </button>
                   )}
                   {transcript && (
-                    <button 
+                    <button
                       onClick={() => {
                         setTranscript("");
                         setIsReviewMode(false);
@@ -352,15 +287,15 @@ function App() {
                 </div>
               </div>
 
-              <TranscriptionBox 
-                transcript={transcript} 
-                isReviewMode={isReviewMode} 
+              <TranscriptionBox
+                transcript={transcript}
+                isReviewMode={isReviewMode}
                 onEdit={() => setIsReviewMode(false)}
               />
             </div>
           </div>
         ) : (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-8 min-h-[500px]"
@@ -374,18 +309,18 @@ function App() {
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-2">{history.length} Saved Records</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {history.length > 0 ? (
                 history.map((item) => (
-                  <HistoryCard 
-                    key={item._id} 
-                    transcription={item} 
+                  <HistoryCard
+                    key={item._id}
+                    transcription={item}
                     onClick={(t) => {
                       setTranscript(t.transcriptionText);
                       setCurrentView("studio");
                       setIsReviewMode(true);
-                    }} 
+                    }}
                     onDelete={handleDeleteHistory}
                   />
                 ))
@@ -400,7 +335,7 @@ function App() {
         )}
       </main>
 
-      {/* Simplified Status Bar */}
+      {/* Status Bar */}
       <footer className="fixed bottom-0 w-full border-t border-white/5 py-3 px-4 md:px-8 bg-slate-950/80 backdrop-blur-sm z-40">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">
           <div className="flex items-center gap-2 md:gap-4 flex-wrap">

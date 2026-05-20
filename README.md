@@ -1,5 +1,8 @@
 # Speech-to-Text Project
 
+## Deployment Link : 
+https://ai-data-analyst-dashboard-phi.vercel.app/
+
 ## 1. Introduction
 Hi! This is a project I’ve been working on to make audio transcription super easy. It’s a full-stack web application that allows you to either upload an audio file or record your voice live, and it converts everything into text in just a few seconds. I built this to explore how we can use modern APIs to solve everyday problems like manual typing.
 

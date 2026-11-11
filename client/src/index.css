@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Newsreader", Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Royal Amber (Primary Brand) */
+  --color-amber-brand: #C87932;
+  --color-amber-brand-hover: #B76D2B;
+  --color-amber-brand-active: #9F5A1D;
+  --color-amber-brand-light: #FDF4EB;
+  --color-amber-brand-subtle: #FBF0E4;
+
+  /* Soft Amber (Secondary Accent) */
+  --color-amber-soft: #E89548;
+  --color-amber-soft-hover: #D88537;
+  --color-amber-soft-light: #FFF6EE;
+
+  /* Deep Charcoal (Primary Text & Headings) */
+  --color-charcoal: #292929;
+  --color-charcoal-strong: #1A1A1A;
+
+  /* Stone Grey (Secondary Text & Muted Information) */
+  --color-stone-grey: #77736D;
+  --color-stone-grey-light: #9C9790;
+
+  /* Pure White (Cards, Modals, Editor Surfaces) */
+  --color-pure-white: #FFFFFF;
+
+  /* Warm Ivory (Main Application Background) */
+  --color-warm-ivory: #F8F5EF;
+  --color-warm-ivory-dark: #F2EFE8;
+
+  /* Warm Grey (Borders & Dividers) */
+  --color-warm-grey: #E7E0D6;
+  --color-warm-grey-subtle: #EFE9E0;
+  --color-warm-grey-strong: #D9D1C5;
+}
+
+:root {
+  color-scheme: light;
+  --bg-app: #F8F5EF;
+  --bg-card: #FFFFFF;
+  --text-primary: #292929;
+  --text-secondary: #77736D;
+  --border-color: #E7E0D6;
+  --brand-primary: #C87932;
+  --brand-secondary: #E89548;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: #F8F5EF;
+  color: #292929;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+  selection-background-color: rgba(200, 121, 50, 0.2);
+  selection-color: #292929;
+}
+
+/* Crisp White Panel on Warm Ivory Canvas */
+.amber-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E7E0D6;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(41, 41, 41, 0.03), 0 1px 2px -1px rgba(41, 41, 41, 0.03);
+}
+
+.amber-card-elevated {
+  background-color: #FFFFFF;
+  border: 1px solid #E7E0D6;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 20px -4px rgba(41, 41, 41, 0.06), 0 4px 6px -2px rgba(41, 41, 41, 0.03);
+}
+
+/* Subtle dot matrix pattern */
+.amber-grid-bg {
+  background-size: 24px 24px;
+  background-image: radial-gradient(circle, rgba(119, 115, 109, 0.12) 1px, transparent 1px);
+}
+
+/* Refined Minimal Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D9D1C5;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #BDB4A6;
+}

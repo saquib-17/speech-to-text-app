@@ -10,6 +10,10 @@ import {
   setGenAIClient,
   getGenAIClient,
   isAIConfigured,
+  setQuotaCooldown,
+  resetQuotaCooldown,
+  getQuotaStatus,
+  extractQuotaErrorDetails,
 } from "../services/aiService.js";
 import env from "../config/env.js";
 
@@ -24,6 +28,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await clearTestDB();
   resetMockAIResponse();
+  resetQuotaCooldown();
   setGenAIClient(null);
 });
 
@@ -33,6 +38,7 @@ describe("AI Intelligence Engine (/api/ai)", () => {
   let userATranscript;
 
   beforeEach(async () => {
+    resetQuotaCooldown();
     // Register User A
     const regARes = await request(app)
       .post("/api/auth/register")
@@ -166,6 +172,7 @@ describe("AI Intelligence Engine (/api/ai)", () => {
 describe("Gemini 3.8 Flash Interactions API Unit Tests", () => {
   beforeEach(() => {
     setGenAIClient(null);
+    resetQuotaCooldown();
   });
 
   it("should verify GEMINI_MODEL defaults to gemini-3.8-flash in configuration", () => {
@@ -251,11 +258,16 @@ describe("Gemini 3.8 Flash Interactions API Unit Tests", () => {
 
     await expect(callGemini("Prompt")).rejects.toMatchObject({
       statusCode: 429,
-      message: expect.stringContaining("rate limit or quota exceeded"),
+      isQuotaExceeded: true,
+      message: expect.stringContaining("quota"),
     });
+
+    // Reset cooldown so test cleanup is clean
+    resetQuotaCooldown();
   });
 
   it("should throw 503 when Gemini service experiences high demand", async () => {
+    resetQuotaCooldown();
     const serviceError = new Error("gemini-3.8-flash is currently experiencing high demand. Please try again later.");
     serviceError.status = 503;
 
@@ -272,6 +284,7 @@ describe("Gemini 3.8 Flash Interactions API Unit Tests", () => {
   });
 
   it("should throw 401 when API key is invalid", async () => {
+    resetQuotaCooldown();
     const authError = new Error("API_KEY_INVALID: API key not valid. Please pass a valid API key.");
     authError.status = 400;
 
@@ -288,7 +301,10 @@ describe("Gemini 3.8 Flash Interactions API Unit Tests", () => {
   });
 
   it("should throw 400 when model is deprecated or not found", async () => {
-    const deprecationError = new Error("This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash.");
+    resetQuotaCooldown();
+    const deprecationError = new Error(
+      "This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash."
+    );
     deprecationError.status = 404;
 
     setGenAIClient({
@@ -304,6 +320,7 @@ describe("Gemini 3.8 Flash Interactions API Unit Tests", () => {
   });
 
   it("should throw 500 when model response has empty output_text", async () => {
+    resetQuotaCooldown();
     setGenAIClient({
       interactions: {
         create: vi.fn().mockResolvedValue({
@@ -319,6 +336,7 @@ describe("Gemini 3.8 Flash Interactions API Unit Tests", () => {
   });
 
   it("should throw 503 when GEMINI_API_KEY is not configured", () => {
+    resetQuotaCooldown();
     const origKey = process.env.GEMINI_API_KEY;
     const origEnvKey = env.GEMINI_API_KEY;
 
@@ -336,5 +354,204 @@ describe("Gemini 3.8 Flash Interactions API Unit Tests", () => {
     // Restore
     process.env.GEMINI_API_KEY = origKey;
     env.GEMINI_API_KEY = origEnvKey;
+  });
+});
+
+describe("Gemini Quota & Rate Limit Cooldown Handling", () => {
+  let userToken;
+  let userTranscript;
+
+  beforeEach(async () => {
+    resetQuotaCooldown();
+    setGenAIClient(null);
+
+    const regRes = await request(app)
+      .post("/api/auth/register")
+      .send({
+        name: "Quota Test User",
+        email: "quota_user@example.com",
+        password: "Password123!",
+      });
+    userToken = regRes.body.data.token;
+    const userId = regRes.body.data.user._id;
+
+    userTranscript = await Transcript.create({
+      user: userId,
+      title: "Quota Test Recording",
+      transcriptionText: "Today we discussed quota management and retry handling.",
+      originalText: "Today we discussed quota management and retry handling.",
+      status: "completed",
+      audioMetadata: {
+        originalName: "quota_meeting.wav",
+        mimeType: "audio/wav",
+        sizeBytes: 1024,
+        durationSeconds: 60,
+      },
+    });
+  });
+
+  // 1. Quota status endpoint returns available when no cooldown active
+  it("should report quota as available via GET /api/ai/quota when no cooldown is active", async () => {
+    const res = await request(app)
+      .get("/api/ai/quota")
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.isCooldownActive).toBe(false);
+    expect(res.body.data.retryAfter).toBeNull();
+  });
+
+  // 2. Quota status endpoint returns active cooldown
+  it("should report active cooldown and retry time via GET /api/ai/quota", async () => {
+    setQuotaCooldown(3600, "Daily Gemini AI limit reached (20 requests/day).");
+
+    const res = await request(app)
+      .get("/api/ai/quota")
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.isCooldownActive).toBe(true);
+    expect(res.body.data.retryAfter).toBeGreaterThan(0);
+    expect(res.body.data.retryAt).toBeDefined();
+    expect(res.body.data.message).toContain("Daily Gemini AI limit reached");
+  });
+
+  // 3. Extract retry seconds from Google google.rpc.RetryInfo
+  it("should extract retry seconds from google.rpc.RetryInfo detail", () => {
+    const errorWithRetryInfo = {
+      status: 429,
+      message: "Resource has been exhausted (e.g. check quota).",
+      details: [
+        {
+          "@type": "type.googleapis.com/google.rpc.RetryInfo",
+          retryDelay: "3600s",
+        },
+      ],
+    };
+
+    const extracted = extractQuotaErrorDetails(errorWithRetryInfo);
+    expect(extracted).not.toBeNull();
+    expect(extracted.isQuota).toBe(true);
+    expect(extracted.retryAfterSeconds).toBe(3600);
+    expect(extracted.retryAt).toBeDefined();
+    expect(extracted.friendlyMessage).toContain("Daily Gemini AI request limit reached");
+  });
+
+  // 4. Extract retry seconds from message text formats
+  it("should extract retry seconds from message text (retry after 45s / 1h 30m)", () => {
+    const errorSeconds = {
+      status: 429,
+      message: "Resource has been exhausted (e.g. check quota). Please retry after 45s.",
+    };
+    const extractedSeconds = extractQuotaErrorDetails(errorSeconds);
+    expect(extractedSeconds.retryAfterSeconds).toBe(45);
+
+    const errorHoursMin = {
+      status: 429,
+      message: "Quota exceeded for project. Please retry after 1h 30m.",
+    };
+    const extractedHours = extractQuotaErrorDetails(errorHoursMin);
+    expect(extractedHours.retryAfterSeconds).toBe(5400); // 1h (3600) + 30m (1800)
+  });
+
+  // 5. Extract retry seconds from Retry-After header
+  it("should extract retry delay from Retry-After header", () => {
+    const errorHeader = {
+      status: 429,
+      message: "Too Many Requests",
+      headers: {
+        get: (header) => (header.toLowerCase() === "retry-after" ? "120" : null),
+      },
+    };
+    const extracted = extractQuotaErrorDetails(errorHeader);
+    expect(extracted.retryAfterSeconds).toBe(120);
+  });
+
+  // 6. Detect daily quota limit format (20 requests per day)
+  it("should detect daily quota limit and return a friendly daily quota message", () => {
+    const dailyQuotaError = {
+      status: 429,
+      message:
+        "Quota exceeded for quota metric 'GenerateContent requests per project per day' and limit '20' of service 'generativelanguage.googleapis.com'.",
+    };
+    const extracted = extractQuotaErrorDetails(dailyQuotaError);
+    expect(extracted.isQuota).toBe(true);
+    expect(extracted.friendlyMessage).toContain("Daily Gemini AI request limit reached (20 requests/day free tier)");
+    expect(extracted.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  // 7. Blocks repeated calls when cooldown is active without calling upstream Gemini
+  it("should immediately reject repeated callGemini calls while cooldown is active", async () => {
+    const mockCreate = vi.fn();
+    setGenAIClient({
+      interactions: {
+        create: mockCreate,
+      },
+    });
+
+    // Set cooldown active
+    setQuotaCooldown(120, "Daily quota limit reached.");
+
+    await expect(callGemini("Any prompt")).rejects.toMatchObject({
+      statusCode: 429,
+      isQuotaExceeded: true,
+      retryAfter: expect.any(Number),
+      message: expect.stringContaining("Daily quota limit reached"),
+    });
+
+    // Upstream Google API was NEVER called
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  // 8. Summarize and Ask endpoints return 429 with Retry-After header during active cooldown
+  it("should reject POST /api/ai/summarize/:id with 429 and Retry-After header during cooldown", async () => {
+    setQuotaCooldown(300, "Daily Gemini AI request limit reached.");
+
+    const res = await request(app)
+      .post(`/api/ai/summarize/${userTranscript._id}`)
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.statusCode).toBe(429);
+    expect(res.body.success).toBe(false);
+    expect(res.body.isQuotaExceeded).toBe(true);
+    expect(res.body.retryAfter).toBeGreaterThan(0);
+    expect(res.body.retryAt).toBeDefined();
+    expect(res.header["retry-after"]).toBeDefined();
+    expect(res.body.message).toContain("Daily Gemini AI request limit reached");
+  });
+
+  it("should reject POST /api/ai/ask/:id with 429 and Retry-After header during cooldown", async () => {
+    setQuotaCooldown(300, "Daily Gemini AI request limit reached.");
+
+    const res = await request(app)
+      .post(`/api/ai/ask/${userTranscript._id}`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ question: "What is this recording about?" });
+
+    expect(res.statusCode).toBe(429);
+    expect(res.body.success).toBe(false);
+    expect(res.body.isQuotaExceeded).toBe(true);
+    expect(res.body.retryAfter).toBeGreaterThan(0);
+    expect(res.body.retryAt).toBeDefined();
+    expect(res.header["retry-after"]).toBeDefined();
+  });
+
+  // 9. Resetting cooldown immediately allows requests to proceed
+  it("should allow AI requests to proceed immediately after cooldown is reset or expired", async () => {
+    setQuotaCooldown(300);
+    expect(getQuotaStatus().isCooldownActive).toBe(true);
+
+    // Reset cooldown
+    resetQuotaCooldown();
+    expect(getQuotaStatus().isCooldownActive).toBe(false);
+
+    const res = await request(app)
+      .post(`/api/ai/summarize/${userTranscript._id}`)
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
   });
 });

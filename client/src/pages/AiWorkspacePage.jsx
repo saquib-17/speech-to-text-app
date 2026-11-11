@@ -2,8 +2,14 @@ import { useState, useEffect } from "react";
 import { Sparkles, FileText, HelpCircle, Send, CheckCircle2, ArrowRight, ListOrdered } from "lucide-react";
 import Button from "../components/common/Button";
 import Skeleton from "../components/common/Skeleton";
+import AiQuotaBanner from "../components/common/AiQuotaBanner";
 import api from "../api/client";
 import { useToast } from "../context/ToastContext";
+import {
+  getQuotaCooldown,
+  recordQuotaCooldown,
+  QUOTA_EVENT_NAME,
+} from "../utils/aiQuota";
 
 export const AiWorkspacePage = () => {
   const [transcripts, setTranscripts] = useState([]);
@@ -15,12 +21,58 @@ export const AiWorkspacePage = () => {
   const [isAsking, setIsAsking] = useState(false);
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState([]);
+  const [quotaState, setQuotaState] = useState(getQuotaCooldown());
 
   const toast = useToast();
 
   useEffect(() => {
     fetchTranscriptList();
   }, []);
+
+  // Sync quota status with server and local storage on mount
+  useEffect(() => {
+    setQuotaState(getQuotaCooldown());
+
+    api.ai
+      .getQuota()
+      .then((res) => {
+        if (res.data?.isCooldownActive) {
+          recordQuotaCooldown({
+            retryAfter: res.data.retryAfter,
+            retryAt: res.data.retryAt,
+            message: res.data.message,
+          });
+        }
+      })
+      .catch(() => {
+        // Graceful offline fallback
+      });
+  }, []);
+
+  // Real-time countdown tick & cross-tab quota event listener
+  useEffect(() => {
+    const handleQuotaEvent = (e) => {
+      setQuotaState(e.detail || getQuotaCooldown());
+    };
+
+    window.addEventListener(QUOTA_EVENT_NAME, handleQuotaEvent);
+
+    let interval = null;
+    if (quotaState.isCooldownActive) {
+      interval = setInterval(() => {
+        const current = getQuotaCooldown();
+        setQuotaState(current);
+        if (!current.isCooldownActive && interval) {
+          clearInterval(interval);
+        }
+      }, 1000);
+    }
+
+    return () => {
+      window.removeEventListener(QUOTA_EVENT_NAME, handleQuotaEvent);
+      if (interval) clearInterval(interval);
+    };
+  }, [quotaState.isCooldownActive]);
 
   const fetchTranscriptList = async () => {
     setIsLoadingList(true);
@@ -30,7 +82,6 @@ export const AiWorkspacePage = () => {
         const list = Array.isArray(res.data) ? res.data : (res.data?.transcripts || []);
         setTranscripts(list);
         if (list.length > 0) {
-          // Select the first transcript with existing insights or first item
           const withInsights = list.find((t) => t.aiInsights?.summary);
           loadTranscriptDetails((withInsights || list[0])._id);
         }
@@ -55,6 +106,15 @@ export const AiWorkspacePage = () => {
 
   const handleGenerateSummary = async () => {
     if (!selectedTranscript) return;
+
+    if (quotaState.isCooldownActive) {
+      toast.error(
+        quotaState.message ||
+          "Daily Gemini AI limit reached (20 requests/day). Please wait for the quota cooldown."
+      );
+      return;
+    }
+
     setIsSummarizing(true);
     try {
       const res = await api.ai.summarize(selectedTranscript._id);
@@ -66,7 +126,19 @@ export const AiWorkspacePage = () => {
         }));
       }
     } catch (err) {
-      toast.error(err.message || "Failed to generate AI insights.");
+      if (err.status === 429 || err.data?.isQuotaExceeded) {
+        recordQuotaCooldown({
+          retryAfter: err.data?.retryAfter,
+          retryAt: err.data?.retryAt,
+          message: err.message,
+        });
+        toast.error(
+          err.message ||
+            "Daily AI request limit reached (20 requests/day). AI features will resume once the quota resets."
+        );
+      } else {
+        toast.error(err.message || "Failed to generate AI insights.");
+      }
     } finally {
       setIsSummarizing(false);
     }
@@ -75,6 +147,14 @@ export const AiWorkspacePage = () => {
   const handleAskQuestion = async (e) => {
     e?.preventDefault();
     if (!selectedTranscript || !question.trim() || isAsking) return;
+
+    if (quotaState.isCooldownActive) {
+      toast.error(
+        quotaState.message ||
+          "Daily Gemini AI limit reached (20 requests/day). Please wait for the quota cooldown."
+      );
+      return;
+    }
 
     const currentQuestion = question.trim();
     setQuestion("");
@@ -93,7 +173,19 @@ export const AiWorkspacePage = () => {
         ]);
       }
     } catch (err) {
-      toast.error(err.message || "Failed to answer question.");
+      if (err.status === 429 || err.data?.isQuotaExceeded) {
+        recordQuotaCooldown({
+          retryAfter: err.data?.retryAfter,
+          retryAt: err.data?.retryAt,
+          message: err.message,
+        });
+        toast.error(
+          err.message ||
+            "Daily AI request limit reached (20 requests/day). AI features will resume once the quota resets."
+        );
+      } else {
+        toast.error(err.message || "Failed to answer question.");
+      }
     } finally {
       setIsAsking(false);
     }
@@ -112,7 +204,7 @@ export const AiWorkspacePage = () => {
             <h2 className="text-base sm:text-lg font-bold tracking-tight text-charcoal">AI Intelligence Workspace</h2>
           </div>
           <p className="text-xs text-stone-grey">
-            Extract executive summaries, key discussion points, action items, and run contextual Q&A using Gemini 2.5 Flash.
+            Extract executive summaries, key discussion points, action items, and run contextual Q&A using Gemini 3.8 Flash (Free Tier: 20 requests/day).
           </p>
         </div>
 
@@ -133,6 +225,11 @@ export const AiWorkspacePage = () => {
           </div>
         )}
       </div>
+
+      {/* Quota Cooldown Banner */}
+      {quotaState.isCooldownActive && (
+        <AiQuotaBanner quotaState={quotaState} className="mb-4" />
+      )}
 
       {isLoadingList ? (
         <Skeleton className="h-80 w-full" />
@@ -191,10 +288,18 @@ export const AiWorkspacePage = () => {
               {activeTab === "summary" && hasInsights && (
                 <button
                   onClick={handleGenerateSummary}
-                  disabled={isSummarizing}
-                  className="text-xs text-amber-brand hover:text-amber-brand-hover transition-colors font-semibold cursor-pointer"
+                  disabled={isSummarizing || quotaState.isCooldownActive}
+                  className={`text-xs transition-colors font-semibold ${
+                    quotaState.isCooldownActive
+                      ? "text-stone-grey/50 cursor-not-allowed"
+                      : "text-amber-brand hover:text-amber-brand-hover cursor-pointer"
+                  }`}
                 >
-                  {isSummarizing ? "Regenerating..." : "Regenerate"}
+                  {isSummarizing
+                    ? "Regenerating..."
+                    : quotaState.isCooldownActive
+                    ? "Quota limit active"
+                    : "Regenerate"}
                 </button>
               )}
             </div>
@@ -215,10 +320,16 @@ export const AiWorkspacePage = () => {
                         size="sm"
                         icon={Sparkles}
                         isLoading={isSummarizing}
+                        disabled={quotaState.isCooldownActive}
                         onClick={handleGenerateSummary}
                       >
-                        Generate Insights
+                        {quotaState.isCooldownActive ? "Quota Limit Active" : "Generate Insights"}
                       </Button>
+                      {quotaState.isCooldownActive && (
+                        <p className="text-[10px] text-stone-grey mt-2">
+                          Daily 20 requests limit reached. Re-enables after reset.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -319,15 +430,23 @@ export const AiWorkspacePage = () => {
                       type="text"
                       value={question}
                       onChange={(e) => setQuestion(e.target.value)}
-                      placeholder="Ask a question about this recording..."
-                      disabled={isAsking}
-                      className="flex-1 bg-pure-white border border-warm-grey rounded-lg px-3 py-1.5 text-xs text-charcoal placeholder:text-stone-grey-light focus:outline-none focus:border-amber-brand focus:ring-2 focus:ring-amber-brand/20 shadow-2xs"
+                      placeholder={
+                        quotaState.isCooldownActive
+                          ? "Daily AI quota limit active. Cooldown in progress..."
+                          : "Ask a question about this recording..."
+                      }
+                      disabled={isAsking || quotaState.isCooldownActive}
+                      className={`flex-1 bg-pure-white border rounded-lg px-3 py-1.5 text-xs text-charcoal placeholder:text-stone-grey-light focus:outline-none focus:border-amber-brand focus:ring-2 focus:ring-amber-brand/20 shadow-2xs ${
+                        quotaState.isCooldownActive
+                          ? "border-amber-brand/40 bg-amber-brand-light/30 cursor-not-allowed"
+                          : "border-warm-grey"
+                      }`}
                     />
                     <Button
                       type="submit"
                       variant="primary"
                       size="sm"
-                      disabled={!question.trim() || isAsking}
+                      disabled={!question.trim() || isAsking || quotaState.isCooldownActive}
                       isLoading={isAsking}
                       icon={Send}
                     />

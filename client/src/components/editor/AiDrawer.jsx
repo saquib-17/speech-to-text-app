@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -7,12 +7,17 @@ import {
   HelpCircle,
   Send,
   CheckCircle2,
-  ArrowRight,
   ListOrdered,
 } from "lucide-react";
 import Button from "../common/Button";
+import AiQuotaBanner from "../common/AiQuotaBanner";
 import api from "../../api/client";
 import { useToast } from "../../context/ToastContext";
+import {
+  getQuotaCooldown,
+  recordQuotaCooldown,
+  QUOTA_EVENT_NAME,
+} from "../../utils/aiQuota";
 
 export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) => {
   const [activeTab, setActiveTab] = useState("summary"); // summary | qa
@@ -20,8 +25,56 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
   const [isAsking, setIsAsking] = useState(false);
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState([]);
+  const [quotaState, setQuotaState] = useState(getQuotaCooldown());
 
   const toast = useToast();
+
+  // Sync quota status with server and local storage on drawer open
+  useEffect(() => {
+    if (isOpen) {
+      setQuotaState(getQuotaCooldown());
+
+      api.ai
+        .getQuota()
+        .then((res) => {
+          if (res.data?.isCooldownActive) {
+            recordQuotaCooldown({
+              retryAfter: res.data.retryAfter,
+              retryAt: res.data.retryAt,
+              message: res.data.message,
+            });
+          }
+        })
+        .catch(() => {
+          // Graceful fallback if offline
+        });
+    }
+  }, [isOpen]);
+
+  // Real-time countdown tick & cross-tab / cross-component quota event listener
+  useEffect(() => {
+    const handleQuotaEvent = (e) => {
+      setQuotaState(e.detail || getQuotaCooldown());
+    };
+
+    window.addEventListener(QUOTA_EVENT_NAME, handleQuotaEvent);
+
+    let interval = null;
+    if (quotaState.isCooldownActive) {
+      interval = setInterval(() => {
+        const current = getQuotaCooldown();
+        setQuotaState(current);
+        if (!current.isCooldownActive && interval) {
+          clearInterval(interval);
+        }
+      }, 1000);
+    }
+
+    return () => {
+      window.removeEventListener(QUOTA_EVENT_NAME, handleQuotaEvent);
+      if (interval) clearInterval(interval);
+    };
+  }, [quotaState.isCooldownActive]);
 
   if (!transcript) return null;
 
@@ -30,6 +83,14 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
 
   // Generate or refresh summary
   const handleGenerateSummary = async () => {
+    if (quotaState.isCooldownActive) {
+      toast.error(
+        quotaState.message ||
+          "Daily Gemini AI limit reached (20 requests/day). Please wait for the quota cooldown."
+      );
+      return;
+    }
+
     setIsSummarizing(true);
     try {
       const res = await api.ai.summarize(transcript._id);
@@ -43,7 +104,19 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
         }
       }
     } catch (err) {
-      toast.error(err.message || "Failed to generate AI summary.");
+      if (err.status === 429 || err.data?.isQuotaExceeded) {
+        recordQuotaCooldown({
+          retryAfter: err.data?.retryAfter,
+          retryAt: err.data?.retryAt,
+          message: err.message,
+        });
+        toast.error(
+          err.message ||
+            "Daily AI request limit reached (20 requests/day). AI features will resume once the quota resets."
+        );
+      } else {
+        toast.error(err.message || "Failed to generate AI summary.");
+      }
     } finally {
       setIsSummarizing(false);
     }
@@ -53,6 +126,14 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
   const handleAskQuestion = async (e) => {
     e?.preventDefault();
     if (!question.trim() || isAsking) return;
+
+    if (quotaState.isCooldownActive) {
+      toast.error(
+        quotaState.message ||
+          "Daily Gemini AI limit reached (20 requests/day). Please wait for the quota cooldown."
+      );
+      return;
+    }
 
     const currentQuestion = question.trim();
     setQuestion("");
@@ -71,7 +152,19 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
         ]);
       }
     } catch (err) {
-      toast.error(err.message || "Failed to answer question.");
+      if (err.status === 429 || err.data?.isQuotaExceeded) {
+        recordQuotaCooldown({
+          retryAfter: err.data?.retryAfter,
+          retryAt: err.data?.retryAt,
+          message: err.message,
+        });
+        toast.error(
+          err.message ||
+            "Daily AI request limit reached (20 requests/day). AI features will resume once the quota resets."
+        );
+      } else {
+        toast.error(err.message || "Failed to answer question.");
+      }
     } finally {
       setIsAsking(false);
     }
@@ -106,7 +199,7 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
                 </div>
                 <div>
                   <h3 className="text-xs sm:text-sm font-semibold text-charcoal">AI Intelligence</h3>
-                  <p className="text-[10px] text-stone-grey">Gemini 2.5 Flash Free Tier</p>
+                  <p className="text-[10px] text-stone-grey">Gemini 3.8 Flash Free Tier (20/day)</p>
                 </div>
               </div>
 
@@ -153,6 +246,11 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
 
             {/* Drawer Body */}
             <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-4">
+              {/* Daily Quota Cooldown Banner */}
+              {quotaState.isCooldownActive && (
+                <AiQuotaBanner quotaState={quotaState} className="mb-3" />
+              )}
+
               {activeTab === "summary" && (
                 <>
                   {!hasInsights ? (
@@ -169,10 +267,16 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
                         size="sm"
                         icon={Sparkles}
                         isLoading={isSummarizing}
+                        disabled={quotaState.isCooldownActive}
                         onClick={handleGenerateSummary}
                       >
-                        Generate Insights
+                        {quotaState.isCooldownActive ? "Quota Limit Active" : "Generate Insights"}
                       </Button>
+                      {quotaState.isCooldownActive && (
+                        <p className="text-[10px] text-stone-grey mt-2">
+                          Daily 20 requests limit reached. Re-enables after reset.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -185,10 +289,18 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
                           </h4>
                           <button
                             onClick={handleGenerateSummary}
-                            disabled={isSummarizing}
-                            className="text-[10px] text-amber-brand hover:text-amber-brand-hover font-semibold transition-colors cursor-pointer"
+                            disabled={isSummarizing || quotaState.isCooldownActive}
+                            className={`text-[10px] font-semibold transition-colors ${
+                              quotaState.isCooldownActive
+                                ? "text-stone-grey/50 cursor-not-allowed"
+                                : "text-amber-brand hover:text-amber-brand-hover cursor-pointer"
+                            }`}
                           >
-                            {isSummarizing ? "Regenerating..." : "Regenerate"}
+                            {isSummarizing
+                              ? "Regenerating..."
+                              : quotaState.isCooldownActive
+                              ? "Quota limit active"
+                              : "Regenerate"}
                           </button>
                         </div>
                         <div className="p-3 rounded-lg bg-warm-ivory border border-warm-grey text-xs sm:text-sm text-charcoal leading-relaxed whitespace-pre-wrap">
@@ -283,16 +395,24 @@ export const AiDrawer = ({ isOpen, onClose, transcript, onUpdateTranscript }) =>
                         type="text"
                         value={question}
                         onChange={(e) => setQuestion(e.target.value)}
-                        placeholder="Ask about this transcript..."
-                        disabled={isAsking}
-                        className="flex-1 bg-pure-white border border-warm-grey rounded-lg px-3 py-1.5 text-xs text-charcoal placeholder:text-stone-grey focus:outline-none focus:border-amber-brand"
+                        placeholder={
+                          quotaState.isCooldownActive
+                            ? "Daily AI quota limit active. Cooldown in progress..."
+                            : "Ask about this transcript..."
+                        }
+                        disabled={isAsking || quotaState.isCooldownActive}
+                        className={`flex-1 bg-pure-white border rounded-lg px-3 py-1.5 text-xs text-charcoal placeholder:text-stone-grey focus:outline-none focus:border-amber-brand ${
+                          quotaState.isCooldownActive
+                            ? "border-amber-brand/40 bg-amber-brand-light/30 cursor-not-allowed"
+                            : "border-warm-grey"
+                        }`}
                       />
                       <Button
                         type="submit"
                         size="sm"
                         variant="primary"
                         isLoading={isAsking}
-                        disabled={!question.trim()}
+                        disabled={!question.trim() || isAsking || quotaState.isCooldownActive}
                         icon={Send}
                       >
                         Ask

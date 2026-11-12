@@ -8,12 +8,14 @@ import {
   Settings,
   LogOut,
   Cpu,
+  LogIn,
+  UserPlus,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import Badge from "../common/Badge";
 
 export const Sidebar = ({ isOpen, onClose }) => {
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
   const navItems = [
@@ -22,6 +24,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
       icon: LayoutDashboard,
       label: "Dashboard",
       description: "Overview & Analytics",
+      public: true,
     },
     {
       to: "/studio",
@@ -29,30 +32,34 @@ export const Sidebar = ({ isOpen, onClose }) => {
       label: "Audio Studio",
       badge: "Live",
       description: "Record & Transcribe",
+      public: false,
     },
     {
       to: "/history",
       icon: FileText,
       label: "Transcripts",
       description: "Searchable Archive",
+      public: false,
     },
     {
       to: "/insights",
       icon: Sparkles,
       label: "AI Intelligence",
       description: "Summaries & Q&A",
+      public: false,
     },
     {
       to: "/settings",
       icon: Settings,
       label: "Settings",
       description: "Preferences & System",
+      public: false,
     },
   ];
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/dashboard");
   };
 
   return (
@@ -66,8 +73,9 @@ export const Sidebar = ({ isOpen, onClose }) => {
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-[275px] border-r border-[#82563B] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed top-0 bottom-0 left-0 z-40 w-[275px] border-r border-[#82563B] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
         style={{
           background: "linear-gradient(180deg, #542B17 0%, #713B1E 100%)",
         }}
@@ -90,8 +98,13 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Navigation List */}
         <div className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto">
-          <div className="px-2.5 pb-1">
+          <div className="px-2.5 pb-1 flex items-center justify-between">
             <span className="text-[10px] font-medium uppercase tracking-wider text-[#C6A995]">Workspace</span>
+            {!isAuthenticated && (
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#3E1E0F]/90 border border-[#82563B] text-[#FFB36B] font-mono">
+                Guest Mode
+              </span>
+            )}
           </div>
 
           {navItems.map((item) => (
@@ -102,9 +115,10 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 if (window.innerWidth < 1024) onClose();
               }}
               className={({ isActive }) =>
-                `group flex items-center justify-between px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${isActive
-                  ? "bg-[#C87932] text-white font-semibold shadow-xs border border-[#E89548]/30"
-                  : "text-[#F4E5D8] hover:text-white hover:bg-[#754326] border border-transparent"
+                `group flex items-center justify-between px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-[#C87932] text-white font-semibold shadow-xs border border-[#E89548]/30"
+                    : "text-[#F4E5D8] hover:text-white hover:bg-[#754326] border border-transparent"
                 }`
               }
             >
@@ -112,21 +126,28 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 <>
                   <div className="flex items-center gap-2.5">
                     <item.icon
-                      className={`w-4 h-4 transition-colors ${isActive ? "text-white" : "text-[#C6A995] group-hover:text-white"
-                        }`}
+                      className={`w-4 h-4 transition-colors ${
+                        isActive ? "text-white" : "text-[#C6A995] group-hover:text-white"
+                      }`}
                     />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge && (
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wide ${isActive
-                        ? "bg-white/20 text-white border border-white/30"
-                        : "bg-[#754326] text-[#FFB36B] border border-[#82563B]"
+                  <div className="flex items-center gap-1.5">
+                    {!isAuthenticated && !item.public && (
+                      <Lock className="w-3 h-3 text-[#C6A995]/70" />
+                    )}
+                    {item.badge && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wide ${
+                          isActive
+                            ? "bg-white/20 text-white border border-white/30"
+                            : "bg-[#754326] text-[#FFB36B] border border-[#82563B]"
                         }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
                 </>
               )}
             </NavLink>
@@ -146,31 +167,56 @@ export const Sidebar = ({ isOpen, onClose }) => {
             </div>
           </div>
           <p className="text-xs text-[#C6A995] leading-tight font-normal">
-            Local speech inference on CPU. No cloud latency.
+            Local speech inference on CPU. Zero cloud transcription cost.
           </p>
         </div>
 
-        {/* User Profile Bar */}
-        <div className="p-2.5 border-t border-[#82563B] bg-[#4C2614]/50 flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-[#754326] border border-[#82563B] flex items-center justify-center font-bold text-xs text-[#FFB36B] shrink-0">
-              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+        {/* User Profile Bar / Guest Call-to-Action */}
+        {isAuthenticated ? (
+          <div className="p-2.5 border-t border-[#82563B] bg-[#4C2614]/50 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-full bg-[#754326] border border-[#82563B] flex items-center justify-center font-bold text-xs text-[#FFB36B] shrink-0">
+                {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#F4E5D8] truncate">{user?.name || "User"}</p>
+                <p className="text-[10px] text-[#C6A995] truncate">{user?.email || ""}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-[#F4E5D8] truncate">{user?.name || "User"}</p>
-              <p className="text-[10px] text-[#C6A995] truncate">{user?.email || ""}</p>
-            </div>
-          </div>
 
-          <button
-            onClick={handleLogout}
-            title="Sign Out"
-            className="p-1 text-[#C6A995] hover:text-[#FFB36B] hover:bg-[#754326] rounded-lg transition-colors shrink-0 cursor-pointer"
-            aria-label="Sign out"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
-        </div>
+            <button
+              onClick={handleLogout}
+              title="Sign Out"
+              className="p-1 text-[#C6A995] hover:text-[#FFB36B] hover:bg-[#754326] rounded-lg transition-colors shrink-0 cursor-pointer"
+              aria-label="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="p-2.5 border-t border-[#82563B] bg-[#4C2614]/80 space-y-1.5">
+            <button
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose();
+                navigate("/login");
+              }}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#C87932] hover:bg-[#D9853B] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+            <button
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose();
+                navigate("/register");
+              }}
+              className="w-full flex items-center justify-center gap-1.5 py-1 px-3 rounded-lg bg-[#5E321C] hover:bg-[#754326] text-[#F4E5D8] border border-[#82563B] text-xs font-medium transition-colors cursor-pointer"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-[#FFB36B]" />
+              <span>Create Account</span>
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );

@@ -71,8 +71,8 @@ app.use(errorHandler);
 let server = null;
 
 if (env.NODE_ENV !== "test") {
-  // Connect to Database
-  connectDB();
+  // Connect to Database before accepting HTTP traffic
+  await connectDB();
 
   server = app.listen(env.PORT, () => {
     console.log(`SpeechScribe API v2 running in ${env.NODE_ENV} mode on port ${env.PORT}`);

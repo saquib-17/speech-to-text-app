@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Radio, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Radio, Mail, Lock, User, ArrowRight, ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import Input from "../components/common/Input";
@@ -17,6 +17,7 @@ export const Register = () => {
   const { register } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,7 +38,10 @@ export const Register = () => {
     try {
       await register(name, email, password);
       toast.success("Account created successfully!");
-      navigate("/dashboard");
+      const target = location.state?.from
+        ? `${location.state.from.pathname || ""}${location.state.from.search || ""}`
+        : "/dashboard";
+      navigate(target || "/dashboard", { replace: true });
     } catch (err) {
       const msg = err.message || "Registration failed. Please check your inputs.";
       setError(msg);
@@ -119,21 +123,35 @@ export const Register = () => {
               type="submit"
               variant="primary"
               size="md"
-              className="w-full justify-center mt-1"
+              className="w-full justify-center mt-1 font-semibold shadow-xs"
               isLoading={isLoading}
               icon={ArrowRight}
             >
-              Create Account
+              Create Account & Enter Studio
             </Button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-warm-grey/70 text-center">
+          <div className="mt-4 pt-4 border-t border-warm-grey/70 space-y-2 text-center">
             <p className="text-xs text-stone-grey">
               Already have an account?{" "}
-              <Link to="/login" className="text-amber-brand hover:text-amber-brand-hover font-semibold underline underline-offset-2">
+              <Link
+                to="/login"
+                state={location.state}
+                className="text-amber-brand hover:text-amber-brand-hover font-semibold underline underline-offset-2"
+              >
                 Sign In
               </Link>
             </p>
+
+            <div>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1 text-xs text-stone-grey hover:text-charcoal transition-colors font-medium"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                <span>Return to Public Dashboard</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

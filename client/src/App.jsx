@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import AppLayout from "./components/layout/AppLayout";
@@ -12,9 +12,10 @@ import AiWorkspacePage from "./pages/AiWorkspacePage";
 import Settings from "./pages/Settings";
 import { Radio } from "lucide-react";
 
-// Protected Route Guard
+// Protected Route Guard: captures intended destination and redirects unauthenticated users
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -22,25 +23,29 @@ const ProtectedRoute = ({ children }) => {
         <div className="w-12 h-12 rounded-xl bg-pure-white border border-warm-grey flex items-center justify-center text-amber-brand mb-4 shadow-sm animate-pulse">
           <Radio className="w-6 h-6" />
         </div>
-        <p className="text-xs font-mono text-stone-grey">Loading SpeechScribe...</p>
+        <p className="text-xs font-mono text-stone-grey">Restoring SpeechScribe Session...</p>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;
 };
 
-// Public Route Guard (Redirects to dashboard if already logged in)
+// Public Route Guard (Redirects to intended destination or dashboard if already logged in)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) return null;
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    const destination = location.state?.from
+      ? `${location.state.from.pathname || ""}${location.state.from.search || ""}`
+      : "/dashboard";
+    return <Navigate to={destination || "/dashboard"} replace />;
   }
 
   return children;
@@ -70,25 +75,56 @@ function App() {
               }
             />
 
-            {/* Protected Workspace Routes */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="/dashboard" replace />} />
+            {/* Dashboard-First Workspace Layout */}
+            <Route path="/" element={<AppLayout />}>
+              {/* Dashboard is public: works seamlessly for both guests and authenticated users */}
+              <Route index element={<Dashboard />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="studio" element={<AudioStudio />} />
-              <Route path="editor/:id" element={<TranscriptEditorPage />} />
-              <Route path="history" element={<HistoryLibrary />} />
-              <Route path="insights" element={<AiWorkspacePage />} />
-              <Route path="settings" element={<Settings />} />
+
+              {/* Protected Workspace Routes requiring authentication */}
+              <Route
+                path="studio"
+                element={
+                  <ProtectedRoute>
+                    <AudioStudio />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="editor/:id"
+                element={
+                  <ProtectedRoute>
+                    <TranscriptEditorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="history"
+                element={
+                  <ProtectedRoute>
+                    <HistoryLibrary />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="insights"
+                element={
+                  <ProtectedRoute>
+                    <AiWorkspacePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
-            {/* Fallback */}
+            {/* Fallback to Dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </ToastProvider>

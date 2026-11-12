@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Radio, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Radio, Mail, Lock, ArrowRight, Sparkles, ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import Input from "../components/common/Input";
@@ -15,6 +15,7 @@ export const Login = () => {
   const { login } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +25,10 @@ export const Login = () => {
     try {
       await login(email, password);
       toast.success("Welcome back to SpeechScribe!");
-      navigate("/dashboard");
+      const target = location.state?.from
+        ? `${location.state.from.pathname || ""}${location.state.from.search || ""}`
+        : "/dashboard";
+      navigate(target || "/dashboard", { replace: true });
     } catch (err) {
       const msg = err.message || "Invalid credentials. Please verify your email and password.";
       setError(msg);
@@ -99,7 +103,7 @@ export const Login = () => {
               type="submit"
               variant="primary"
               size="md"
-              className="w-full justify-center mt-1"
+              className="w-full justify-center mt-1 font-semibold shadow-xs"
               isLoading={isLoading}
               icon={ArrowRight}
             >
@@ -107,13 +111,27 @@ export const Login = () => {
             </Button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-warm-grey/70 text-center">
+          <div className="mt-4 pt-4 border-t border-warm-grey/70 space-y-2 text-center">
             <p className="text-xs text-stone-grey">
               Don't have an account?{" "}
-              <Link to="/register" className="text-amber-brand hover:text-amber-brand-hover font-semibold underline underline-offset-2">
+              <Link
+                to="/register"
+                state={location.state}
+                className="text-amber-brand hover:text-amber-brand-hover font-semibold underline underline-offset-2"
+              >
                 Create Account
               </Link>
             </p>
+
+            <div>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1 text-xs text-stone-grey hover:text-charcoal transition-colors font-medium"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                <span>Return to Public Dashboard</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

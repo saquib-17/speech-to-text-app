@@ -6,19 +6,21 @@ export const Badge = ({
   className = "",
 }) => {
   const sizeStyles = {
-    sm: "px-2 py-0.5 text-[9px] sm:text-[10px] gap-1",
-    md: "px-2 py-0.5 text-[10px] sm:text-[11px] gap-1.5",
+    sm: "px-2 py-0.5 text-[10.5px] gap-1 font-medium",
+    md: "px-2.5 py-0.5 text-[11.5px] gap-1.5 font-medium",
   };
 
   const variantStyles = {
-    completed: "bg-amber-brand-light text-amber-brand border-amber-brand/25",
-    processing: "bg-amber-soft-light text-amber-soft border-amber-soft/35 animate-pulse",
-    uploaded: "bg-warm-ivory text-charcoal border-warm-grey",
-    failed: "bg-red-50 text-red-700 border-red-200",
-    neutral: "bg-warm-ivory text-stone-grey border-warm-grey",
-    mono: "bg-pure-white text-charcoal font-mono border-warm-grey text-[11px]",
-    amber: "bg-amber-brand text-pure-white border-amber-brand",
-    brand: "bg-amber-brand-light text-amber-brand border-amber-brand/25",
+    completed: "bg-[#E8F7EF] text-[#269B62] border-[#269B62]/20",
+    processing: "bg-[#FFF1E2] text-[#F07800] border-[#F07800]/30 animate-pulse",
+    uploaded: "bg-[#FAF9FC] text-[#191B2B] border-[#EBE8F0]",
+    failed: "bg-[#FDECEC] text-[#DC4545] border-[#F8BDBD]",
+    neutral: "bg-[#FAF9FC] text-[#686B7A] border-[#EBE8F0]",
+    mono: "bg-white text-[#191B2B] font-mono border-[#EBE8F0] text-[11px]",
+    orange: "bg-[#F07800] text-white border-transparent",
+    orangeLight: "bg-[#FFF1E2] text-[#F07800] border-[#F07800]/20",
+    purple: "bg-[#F3EBFC] text-[#7138B8] border-[#7138B8]/20",
+    brand: "bg-[#FFF1E2] text-[#F07800] border-[#F07800]/20",
   };
 
   return (
@@ -27,10 +29,10 @@ export const Badge = ({
     >
       {Icon && <Icon className="w-3 h-3 shrink-0" />}
       {variant === "completed" && !Icon && (
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-brand" />
+        <span className="w-1.5 h-1.5 rounded-full bg-[#269B62]" />
       )}
       {variant === "processing" && !Icon && (
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-soft animate-ping" />
+        <span className="w-1.5 h-1.5 rounded-full bg-[#F07800] animate-ping" />
       )}
       <span>{children}</span>
     </span>

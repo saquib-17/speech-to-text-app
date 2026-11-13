@@ -18,6 +18,15 @@ export const AuthProvider = ({ children }) => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  // Centralized Auth Modal state
+  const [authModalState, setAuthModalState] = useState({
+    isOpen: false,
+    mode: "login",
+    title: null,
+    subtitle: null,
+    pendingAction: null,
+  });
+
   const fetchCurrentUser = useCallback(async () => {
     const savedToken = localStorage.getItem("speechscribe_token");
     if (!savedToken) {
@@ -84,6 +93,63 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Open the unified authentication modal
+  const openAuthModal = useCallback(
+    ({ mode = "login", title = null, subtitle = null, onSuccess = null } = {}) => {
+      setAuthModalState({
+        isOpen: true,
+        mode,
+        title,
+        subtitle,
+        pendingAction: typeof onSuccess === "function" ? onSuccess : null,
+      });
+    },
+    []
+  );
+
+  // Close modal and reset pending action
+  const closeAuthModal = useCallback(() => {
+    setAuthModalState((prev) => ({
+      ...prev,
+      isOpen: false,
+      pendingAction: null,
+    }));
+  }, []);
+
+  // Universal action gatekeeper: runs action if logged in, or opens modal and executes after success
+  const requireAuth = useCallback(
+    (actionCallback, options = {}) => {
+      if (user && token) {
+        if (typeof actionCallback === "function") {
+          actionCallback();
+        }
+        return true;
+      }
+
+      openAuthModal({
+        mode: options.mode || "login",
+        title: options.title || "Authentication Required",
+        subtitle: options.subtitle || "Sign in or create an account to proceed.",
+        onSuccess: actionCallback,
+      });
+      return false;
+    },
+    [user, token, openAuthModal]
+  );
+
+  // Callback executed by AuthModal upon successful authentication
+  const handleAuthModalSuccess = useCallback(() => {
+    const action = authModalState.pendingAction;
+    closeAuthModal();
+    if (typeof action === "function") {
+      try {
+        action();
+      } catch (err) {
+        console.error("Error executing pending action after auth:", err);
+      }
+    }
+  }, [authModalState.pendingAction, closeAuthModal]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -95,6 +161,12 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         refreshUser: fetchCurrentUser,
+        // Centralized Modal API
+        authModalState,
+        openAuthModal,
+        closeAuthModal,
+        requireAuth,
+        handleAuthModalSuccess,
       }}
     >
       {children}
@@ -109,3 +181,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;

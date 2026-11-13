@@ -62,7 +62,8 @@ export const api = {
   transcripts: {
     getAll: (params = {}) => apiClient.get("/api/transcripts", { params }),
     getById: (id) => apiClient.get(`/api/transcripts/${id}`),
-    update: (id, payload) => apiClient.put(`/api/transcripts/${id}`, payload),
+    create: (payload) => apiClient.post("/api/transcripts", payload),
+    update: (id, payload) => apiClient.patch(`/api/transcripts/${id}`, payload),
     delete: (id) => apiClient.delete(`/api/transcripts/${id}`),
   },
 
@@ -89,6 +90,7 @@ export const api = {
   ai: {
     summarize: (id) => apiClient.post(`/api/ai/summarize/${id}`),
     ask: (id, question) => apiClient.post(`/api/ai/ask/${id}`, { question }),
+    translate: (id, payload) => apiClient.post(`/api/ai/translate/${id}`, payload),
     getQuota: () => apiClient.get("/api/ai/quota"),
   },
 

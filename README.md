@@ -124,24 +124,40 @@ The application consists of three components that run concurrently:
 #### Terminal 1 — Python Speech Microservice (Faster-Whisper)
 The Python service runs the local speech-to-text inference engine on port 5001.
 
-**On Windows:**
+**On Windows (PowerShell):**
 ```powershell
-cd server/python-service
-
-# Create virtual environment with Python 3.14 (or 3.10-3.13)
-# Note: Use 'py -3.14' if Python 3.15 is your default PATH
-py -3.14 -m venv venv
-
-# Activate virtual environment
-venv\Scripts\activate
-
-# Install requirements
-pip install -r requirements.txt
-
-# Start the service
+cd server\python-service
+.\venv\Scripts\Activate.ps1
 python app.py
 ```
-*(Alternatively, simply run `server\python-service\start.bat` or run `npm run python:start --prefix server`)*
+
+> [!TIP]
+> **Verify Python Interpreter:**  
+> Verify that the active `python` command points to the virtual environment rather than your global system Python:
+> ```powershell
+> (Get-Command python).Source
+> ```
+> Expected output: `...\server\python-service\venv\Scripts\python.exe`
+> 
+> If you execute `python app.py` without activating the virtual environment, Windows invokes the global Python interpreter which does not have `av` installed, producing: `ModuleNotFoundError: No module named 'av'`.
+
+> [!NOTE]
+> **PowerShell Script Execution Policy:**  
+> If PowerShell blocks `Activate.ps1` with an execution policy error, enable script execution for your user account:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+> Or invoke Python directly from the virtual environment without activation:
+> ```powershell
+> .\venv\Scripts\python.exe app.py
+> ```
+> *(Or double-click `server\python-service\start.bat`)*
+
+**Installing / Updating Dependencies (if necessary):**
+```powershell
+# Ensure virtual environment is activated, then run:
+pip install -r requirements.txt
+```
 
 **On macOS / Linux:**
 ```bash
@@ -321,6 +337,20 @@ npm run build
 ---
 
 ## 11. Troubleshooting & FAQs
+
+### Q: Why am I seeing `ModuleNotFoundError: No module named 'av'` when running `python app.py`?
+**A:** This occurs when `python app.py` is invoked using the global system Python instead of the dedicated project virtual environment where PyAV, Faster-Whisper, and FastAPI are installed.
+To fix this, activate the virtual environment in PowerShell before running `app.py`:
+```powershell
+cd server\python-service
+.\venv\Scripts\Activate.ps1
+python app.py
+```
+Or run directly through the virtual environment's Python interpreter:
+```powershell
+cd server\python-service
+.\venv\Scripts\python.exe app.py
+```
 
 ### Q: Why is transcription returning "Local Faster-Whisper speech service is unavailable on 127.0.0.1:5001"?
 **A:** The Python microservice has not been started. Open a terminal, navigate to `server/python-service`, activate your virtualenv, and run `python app.py` (or execute `server\python-service\start.bat` on Windows). Once it logs `Uvicorn running on http://127.0.0.1:5001`, transcription will execute instantly.

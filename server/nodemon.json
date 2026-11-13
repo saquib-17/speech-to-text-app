@@ -1,0 +1,25 @@
+{
+  "watch": [
+    "server.js",
+    "config",
+    "controllers",
+    "middleware",
+    "models",
+    "routes",
+    "services",
+    "utils",
+    "validators"
+  ],
+  "ext": "js,mjs,json",
+  "ignore": [
+    "data/**",
+    "data/db/**",
+    "python-service/**",
+    "uploads/**",
+    "temp/**",
+    "*.test.js",
+    "tests/**",
+    "node_modules/**"
+  ],
+  "delay": 1000
+}

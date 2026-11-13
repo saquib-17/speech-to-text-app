@@ -1,66 +1,62 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
-  Radio,
   Mic,
   LayoutDashboard,
   FileText,
   Sparkles,
+  Clock,
   Settings,
   LogOut,
-  Cpu,
+  Crown,
+  ChevronDown,
   LogIn,
-  UserPlus,
-  Lock,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export const Sidebar = ({ isOpen, onClose }) => {
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
 
   const navItems = [
     {
       to: "/dashboard",
       icon: LayoutDashboard,
       label: "Dashboard",
-      description: "Overview & Analytics",
-      public: true,
     },
     {
       to: "/studio",
       icon: Mic,
       label: "Audio Studio",
       badge: "Live",
-      description: "Record & Transcribe",
-      public: false,
     },
     {
-      to: "/history",
+      to: "/transcripts",
       icon: FileText,
       label: "Transcripts",
-      description: "Searchable Archive",
-      public: false,
     },
     {
       to: "/insights",
       icon: Sparkles,
-      label: "AI Intelligence",
-      description: "Summaries & Q&A",
-      public: false,
+      label: "AI Workspace",
+    },
+    {
+      to: "/history",
+      icon: Clock,
+      label: "History",
     },
     {
       to: "/settings",
       icon: Settings,
       label: "Settings",
-      description: "Preferences & System",
-      public: false,
     },
   ];
 
   const handleLogout = () => {
     logout();
-    navigate("/dashboard");
   };
+
+  const displayName = user?.name || "Mohammed Saquib";
+  const displayEmail = user?.email || "mohammedsaquibansari82@gmail.com";
+  const avatarLetter = (displayName || "M").charAt(0).toUpperCase();
 
   return (
     <>
@@ -68,57 +64,57 @@ export const Sidebar = ({ isOpen, onClose }) => {
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 bg-charcoal/40 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-[#172341]/70 backdrop-blur-xs z-40 lg:hidden"
         />
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-[275px] border-r border-[#82563B] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 bottom-0 left-0 z-40 w-[245px] border-r border-[#303D5D] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         style={{
-          background: "linear-gradient(180deg, #542B17 0%, #713B1E 100%)",
+          backgroundColor: "#172341",
         }}
       >
-        {/* Brand Header */}
-        <div className="h-13 sm:h-14 px-4 flex items-center justify-between border-b border-[#82563B]">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#3E1E0F]/90 border border-[#82563B] flex items-center justify-center text-[#FFB36B] shadow-2xs">
-              <Radio className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-xs sm:text-sm tracking-tight text-[#F4E5D8]">SpeechScribe</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#3E1E0F]/80 border border-[#82563B] text-[#C6A995] font-medium">v2</span>
+        {/* Brand Header: 72px Target */}
+        <div className="h-[72px] px-4 flex items-center justify-between border-b border-[#303D5D] shrink-0">
+          <div className="flex items-center gap-2.5">
+            {/* Orange Circular Soundwave Icon */}
+            <div className="w-8 h-8 rounded-full bg-[#F07800] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <div className="flex items-end gap-0.5 h-4 py-0.5">
+                <span className="w-0.5 h-2 rounded-full bg-white" />
+                <span className="w-0.5 h-3.5 rounded-full bg-white" />
+                <span className="w-0.5 h-4 rounded-full bg-white" />
+                <span className="w-0.5 h-2.5 rounded-full bg-white" />
+                <span className="w-0.5 h-3.5 rounded-full bg-white" />
+                <span className="w-0.5 h-1.5 rounded-full bg-white" />
               </div>
-              <p className="text-[10px] text-[#C6A995] font-medium">Speech Intelligence</p>
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-[14px] tracking-tight text-white">SpeechScribe AI</span>
+                <span className="text-[10px] font-mono px-1 py-0.5 rounded-md bg-[#202D50] text-[#8E99B4] font-semibold border border-[#303D5D]">
+                  v2
+                </span>
+              </div>
+              <p className="text-[11px] text-[#8E99B4] font-normal leading-tight">Speech to Text & AI</p>
             </div>
           </div>
         </div>
 
-        {/* Navigation List */}
-        <div className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto">
-          <div className="px-2.5 pb-1 flex items-center justify-between">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-[#C6A995]">Workspace</span>
-            {!isAuthenticated && (
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#3E1E0F]/90 border border-[#82563B] text-[#FFB36B] font-mono">
-                Guest Mode
-              </span>
-            )}
-          </div>
-
+        {/* Navigation List: 40px item height, 14px font, 18px icons, compact gap */}
+        <div className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
-              key={item.to}
+              key={item.label + item.to}
               to={item.to}
               onClick={() => {
                 if (window.innerWidth < 1024) onClose();
               }}
               className={({ isActive }) =>
-                `group flex items-center justify-between px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-[#C87932] text-white font-semibold shadow-xs border border-[#E89548]/30"
-                    : "text-[#F4E5D8] hover:text-white hover:bg-[#754326] border border-transparent"
+                `group flex items-center justify-between h-[40px] px-3 rounded-xl text-[14px] font-medium transition-all ${isActive
+                  ? "bg-[#FFF9F3] text-[#191B2B] shadow-xs font-semibold"
+                  : "text-[#F1F4FA] hover:text-white hover:bg-[#202D50]"
                 }`
               }
             >
@@ -126,94 +122,107 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 <>
                   <div className="flex items-center gap-2.5">
                     <item.icon
-                      className={`w-4 h-4 transition-colors ${
-                        isActive ? "text-white" : "text-[#C6A995] group-hover:text-white"
-                      }`}
+                      className={`w-[18px] h-[18px] transition-colors shrink-0 ${isActive ? "text-[#191B2B]" : "text-[#8E99B4] group-hover:text-white"
+                        }`}
                     />
                     <span>{item.label}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {!isAuthenticated && !item.public && (
-                      <Lock className="w-3 h-3 text-[#C6A995]/70" />
-                    )}
-                    {item.badge && (
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wide ${
-                          isActive
-                            ? "bg-white/20 text-white border border-white/30"
-                            : "bg-[#754326] text-[#FFB36B] border border-[#82563B]"
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
+
+                  {item.badge && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-[#F07800] text-white shadow-2xs">
+                      {item.badge}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>
           ))}
         </div>
 
-        {/* Local Engine Diagnostics Widget */}
-        <div className="p-2.5 mx-2.5 mb-2.5 rounded-lg bg-[#5E321C]/90 border border-[#82563B] text-xs shadow-2xs">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-1.5 text-[#F4E5D8] text-xs font-semibold">
-              <Cpu className="w-3.5 h-3.5 text-[#FFB36B]" />
-              <span>Whisper Base</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FFB36B] animate-pulse" />
-              <span className="text-[10px] text-[#FFB36B] font-mono font-semibold">INT8 Ready</span>
-            </div>
-          </div>
-          <p className="text-xs text-[#C6A995] leading-tight font-normal">
-            Local speech inference on CPU. Zero cloud transcription cost.
-          </p>
+        {/* Decorative Waveform graphic */}
+        <div className="relative px-2 py-0.5 pointer-events-none overflow-hidden shrink-0">
+          <svg viewBox="0 0 245 28" className="w-full h-5 fill-current">
+            <path
+              d="M0 18 Q 45 6, 90 18 T 175 18 T 245 18 V 28 H 0 Z"
+              fill="#204595"
+              opacity="0.45"
+            />
+            <path
+              d="M0 22 Q 50 10, 110 20 T 195 18 T 245 20 V 28 H 0 Z"
+              fill="#F07800"
+              opacity="0.9"
+            />
+          </svg>
         </div>
 
-        {/* User Profile Bar / Guest Call-to-Action */}
+        {/* Plan / Quota Card: Compact Height */}
+        <div className="p-2.5 mx-2.5 mb-2 rounded-xl bg-[#202D50] border border-[#303D5D] text-[11px] shadow-2xs shrink-0">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5 text-white text-[11px] font-semibold">
+              <Crown className="w-3.5 h-3.5 text-[#F07800]" />
+              <span>Free Plan</span>
+            </div>
+            <span className="text-[10px] text-[#8E99B4]">20 req/day</span>
+          </div>
+
+          <div className="w-full h-1 bg-[#172341] rounded-full overflow-hidden mt-1 mb-1">
+            <div className="h-full bg-[#F07800] rounded-full w-[70%]" />
+          </div>
+
+          <div className="flex items-center justify-end text-[10px] text-[#8E99B4] font-mono">
+            <span>14 / 20 used</span>
+          </div>
+        </div>
+
+        {/* User Profile Bar: Compact Height */}
         {isAuthenticated ? (
-          <div className="p-2.5 border-t border-[#82563B] bg-[#4C2614]/50 flex items-center justify-between">
+          <div className="py-2 px-3 border-t border-[#303D5D] bg-[#172341] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-[#754326] border border-[#82563B] flex items-center justify-center font-bold text-xs text-[#FFB36B] shrink-0">
-                {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+              <div className="w-7 h-7 rounded-full bg-[#7138B8] border border-[#9B6BD0]/30 flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-2xs">
+                {avatarLetter}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#F4E5D8] truncate">{user?.name || "User"}</p>
-                <p className="text-[10px] text-[#C6A995] truncate">{user?.email || ""}</p>
+                <p className="text-[12px] font-medium text-white truncate">{displayName}</p>
+                <p className="text-[10px] text-[#8E99B4] truncate">{displayEmail}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleLogout}
+                title="Sign Out"
+                className="p-1 text-[#8E99B4] hover:text-[#F07800] hover:bg-[#202D50] rounded-md transition-colors shrink-0 cursor-pointer"
+                aria-label="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="py-2 px-3 border-t border-[#303D5D] bg-[#172341] flex items-center justify-between shrink-0">
+            <div
+              onClick={() => openAuthModal({ mode: "login", title: "Sign In to Workspace" })}
+              className="flex items-center gap-2 min-w-0 cursor-pointer group flex-1 mr-2"
+            >
+              <div className="w-7 h-7 rounded-full bg-[#7138B8] flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-2xs">
+                M
+              </div>
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium text-white group-hover:text-[#F07800] transition-colors truncate">Guest User</p>
+                <p className="text-[10px] text-[#8E99B4] truncate">Sign in to sync data</p>
               </div>
             </div>
 
             <button
-              onClick={handleLogout}
-              title="Sign Out"
-              className="p-1 text-[#C6A995] hover:text-[#FFB36B] hover:bg-[#754326] rounded-lg transition-colors shrink-0 cursor-pointer"
-              aria-label="Sign out"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <div className="p-2.5 border-t border-[#82563B] bg-[#4C2614]/80 space-y-1.5">
-            <button
               onClick={() => {
                 if (window.innerWidth < 1024) onClose();
-                navigate("/login");
+                openAuthModal({ mode: "login", title: "Sign In to Workspace" });
               }}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#C87932] hover:bg-[#D9853B] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              title="Sign In"
+              className="p-1 text-[#8E99B4] hover:text-white hover:bg-[#202D50] rounded-md transition-colors shrink-0 cursor-pointer"
+              aria-label="Sign in"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </button>
-            <button
-              onClick={() => {
-                if (window.innerWidth < 1024) onClose();
-                navigate("/register");
-              }}
-              className="w-full flex items-center justify-center gap-1.5 py-1 px-3 rounded-lg bg-[#5E321C] hover:bg-[#754326] text-[#F4E5D8] border border-[#82563B] text-xs font-medium transition-colors cursor-pointer"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-[#FFB36B]" />
-              <span>Create Account</span>
             </button>
           </div>
         )}

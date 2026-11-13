@@ -73,6 +73,13 @@ export const errorHandler = (err, req, res, next) => {
     }
   }
 
+  // HTTP 503 Service Unavailable & 504 Gateway Timeout
+  if (statusCode === HTTP_STATUS.SERVICE_UNAVAILABLE) {
+    errorName = "Service Unavailable";
+  } else if (statusCode === 504) {
+    errorName = "Gateway Timeout";
+  }
+
   const responsePayload = {
     success: false,
     statusCode,

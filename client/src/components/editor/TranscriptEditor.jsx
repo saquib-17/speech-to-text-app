@@ -11,10 +11,13 @@ import {
   CheckCircle2,
   Loader2,
   Calendar,
+  Globe,
+  RotateCcw,
 } from "lucide-react";
 import SynchronizedPlayer from "./SynchronizedPlayer";
 import ExportModal from "./ExportModal";
 import AiDrawer from "./AiDrawer";
+import TranslationModal from "./TranslationModal";
 import Button from "../common/Button";
 import Badge from "../common/Badge";
 import Modal from "../common/Modal";
@@ -27,6 +30,7 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
   const [saveStatus, setSaveStatus] = useState("saved"); // saved | saving | unsaved
   const [isCopied, setIsCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showTranslateModal, setShowTranslateModal] = useState(false);
   const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -101,6 +105,64 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
     }
   };
 
+  const handleReplaceContent = async (newText, targetLang) => {
+    setContent(newText);
+    setSaveStatus("saving");
+    try {
+      const res = await api.transcripts.update(transcript._id, {
+        title,
+        transcriptionText: newText,
+      });
+      if (res.success && res.data) {
+        setSaveStatus("saved");
+        if (onUpdate) onUpdate(res.data);
+      }
+    } catch (err) {
+      setSaveStatus("unsaved");
+      throw err;
+    }
+  };
+
+  const handleSaveCopy = async ({ title: newTitle, transcriptionText, originalText, targetLanguage }) => {
+    const res = await api.transcripts.create({
+      title: newTitle,
+      transcriptionText,
+      originalText,
+      status: "completed",
+      audioMetadata: transcript.audioMetadata || {
+        originalName: `${newTitle}.wav`,
+        mimeType: "audio/wav",
+        sizeBytes: 0,
+        durationSeconds: 0,
+      },
+      transcriptionMetadata: {
+        ...(transcript.transcriptionMetadata || {}),
+        language: targetLanguage.toLowerCase().slice(0, 5),
+      },
+    });
+    return res;
+  };
+
+  const handleRestoreOriginal = async () => {
+    if (!transcript.originalText) return;
+    setContent(transcript.originalText);
+    setSaveStatus("saving");
+    try {
+      const res = await api.transcripts.update(transcript._id, {
+        title,
+        transcriptionText: transcript.originalText,
+      });
+      if (res.success && res.data) {
+        setSaveStatus("saved");
+        if (onUpdate) onUpdate(res.data);
+      }
+      toast.success("Restored original speech transcription.");
+    } catch (err) {
+      setSaveStatus("unsaved");
+      toast.error(err.message || "Failed to restore original transcript.");
+    }
+  };
+
   // Text statistics
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
   const charCount = content.length;
@@ -111,8 +173,8 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
 
   return (
     <div className="space-y-3.5">
-      {/* Top Header Card (Compact) */}
-      <div className="p-3.5 sm:p-4.5 rounded-xl bg-pure-white border border-warm-grey space-y-3 shadow-2xs">
+      {/* Top Header Card */}
+      <div className="p-4 rounded-xl bg-white border border-[#EBE8F0] space-y-3 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Editable Title */}
           <div className="flex-1 min-w-0">
@@ -121,33 +183,33 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
               value={title}
               onChange={handleTitleChange}
               placeholder="Untitled Transcript"
-              className="w-full bg-transparent text-lg sm:text-xl font-bold text-charcoal placeholder:text-stone-grey-light focus:outline-none focus:border-b focus:border-amber-brand py-0.5"
+              className="w-full bg-transparent text-[20px] sm:text-[23px] font-semibold text-[#191B2B] placeholder:text-[#9598A8] focus:outline-none focus:border-b-2 focus:border-[#F07800] py-0.5"
             />
 
-            <div className="flex flex-wrap items-center gap-2.5 mt-1 text-[11px] text-stone-grey">
+            <div className="flex flex-wrap items-center gap-3 mt-1 text-[12px] text-[#686B7A]">
               <span className="flex items-center gap-1 font-mono">
-                <Calendar className="w-3 h-3 text-stone-grey" />
+                <Calendar className="w-3.5 h-3.5 text-[#686B7A]" />
                 {new Date(transcript.createdAt).toLocaleDateString()}
               </span>
 
               {/* Autosave status indicator */}
-              <span className="flex items-center gap-1 font-mono text-[10px]">
+              <span className="flex items-center gap-1 font-mono text-[11px]">
                 {saveStatus === "saving" && (
                   <>
-                    <Loader2 className="w-2.5 h-2.5 text-amber-brand animate-spin" />
-                    <span className="text-amber-brand">Saving...</span>
+                    <Loader2 className="w-3 h-3 text-[#F07800] animate-spin" />
+                    <span className="text-[#F07800] font-semibold">Saving...</span>
                   </>
                 )}
                 {saveStatus === "saved" && (
                   <>
-                    <CheckCircle2 className="w-2.5 h-2.5 text-amber-brand" />
-                    <span className="text-stone-grey">Saved</span>
+                    <CheckCircle2 className="w-3 h-3 text-[#269B62]" />
+                    <span className="text-[#686B7A]">Saved</span>
                   </>
                 )}
                 {saveStatus === "unsaved" && (
                   <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-soft" />
-                    <span className="text-amber-soft">Unsaved edits</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF9B24]" />
+                    <span className="text-[#FF9B24] font-medium">Unsaved edits</span>
                   </>
                 )}
               </span>
@@ -155,13 +217,13 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
           </div>
 
           {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
               icon={isCopied ? Check : Copy}
               onClick={handleCopy}
-              className={isCopied ? "text-amber-brand" : ""}
+              className={isCopied ? "text-[#F07800] border-[#F07800]" : ""}
             >
               {isCopied ? "Copied" : "Copy"}
             </Button>
@@ -176,21 +238,31 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
             </Button>
 
             <Button
-              variant="primary"
+              variant="secondary"
+              size="sm"
+              icon={Globe}
+              onClick={() => setShowTranslateModal(true)}
+            >
+              Translate
+            </Button>
+
+            <Button
+              variant="purple"
               size="sm"
               icon={Sparkles}
               onClick={() => setShowAiDrawer(true)}
+              className="shadow-xs font-semibold"
             >
               AI Insights
             </Button>
 
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="p-1.5 text-stone-grey hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors ml-0.5"
+              className="p-1.5 text-[#686B7A] hover:text-[#DC4545] hover:bg-[#FDECEC] rounded-lg transition-colors ml-0.5 cursor-pointer"
               title="Delete Transcript"
               aria-label="Delete transcript"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -204,7 +276,7 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
         )}
 
         {/* Telemetry Chips Bar */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-warm-grey/60">
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#EBE8F0]">
           <Badge variant="neutral" size="sm" icon={Type}>
             <span className="font-mono">{wordCount}</span> words • <span className="font-mono">{charCount}</span> chars
           </Badge>
@@ -214,23 +286,35 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
           </Badge>
 
           <Badge variant="neutral" size="sm" icon={Languages}>
-            Language: <span className="font-mono font-medium">{metadata.language?.toUpperCase() || "EN"}</span>
+            Language: <span className="font-mono font-bold text-[#F07800]">{metadata.language?.toUpperCase() || "EN"}</span>
           </Badge>
 
           <Badge variant="neutral" size="sm">
             Engine: Faster-Whisper ({metadata.model || "base"})
           </Badge>
+
+          {transcript.originalText && transcript.originalText !== content && (
+            <button
+              type="button"
+              onClick={handleRestoreOriginal}
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFF1E2] border border-[#F07800]/30 text-[#F07800] text-[11px] font-semibold hover:bg-[#F07800] hover:text-white transition-all cursor-pointer shadow-2xs ml-auto"
+              title="Click to restore original speech transcription"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Restore Original</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Primary Transcript Content Editor */}
-      <div className="rounded-xl bg-pure-white border border-warm-grey p-4 sm:p-5 shadow-2xs">
+      <div className="rounded-xl bg-white border border-[#EBE8F0] p-4 sm:p-5 shadow-2xs">
         <textarea
           value={content}
           onChange={handleContentChange}
           placeholder="Transcription text..."
           rows={14}
-          className="w-full bg-transparent text-charcoal text-sm sm:text-base leading-relaxed tracking-normal resize-y focus:outline-none placeholder:text-stone-grey-light font-sans"
+          className="w-full bg-transparent text-[#191B2B] text-[13.5px] sm:text-[14px] leading-relaxed tracking-normal resize-y focus:outline-none placeholder:text-[#9598A8] font-sans"
         />
       </div>
 
@@ -248,6 +332,15 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
         onUpdateTranscript={onUpdate}
       />
 
+      <TranslationModal
+        isOpen={showTranslateModal}
+        onClose={() => setShowTranslateModal(false)}
+        transcript={transcript}
+        currentContent={content}
+        onReplaceContent={handleReplaceContent}
+        onSaveCopy={handleSaveCopy}
+      />
+
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={showDeleteModal}
@@ -256,13 +349,13 @@ export const TranscriptEditor = ({ transcript, onUpdate, onDelete }) => {
         subtitle="This action cannot be undone"
       >
         <div className="space-y-4">
-          <p className="text-xs sm:text-sm text-stone-grey">
+          <p className="text-xs sm:text-sm text-[#686B7A]">
             Are you sure you want to permanently delete &ldquo;
-            <span className="font-semibold text-charcoal">{title}</span>
+            <span className="font-bold text-[#191B2B]">{title}</span>
             &rdquo;? All text, word timestamps, and associated AI insights will be removed.
           </p>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2.5 pt-2">
             <Button
               variant="secondary"
               size="sm"

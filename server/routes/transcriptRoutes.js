@@ -20,6 +20,7 @@ router.get("/", getTranscripts);
 router.post("/", createTranscriptHandler);
 router.get("/:id", verifyTranscriptOwnership, getTranscript);
 router.patch("/:id", verifyTranscriptOwnership, updateTranscriptHandler);
+router.put("/:id", verifyTranscriptOwnership, updateTranscriptHandler);
 router.delete("/:id", verifyTranscriptOwnership, deleteTranscriptHandler);
 
 export default router;

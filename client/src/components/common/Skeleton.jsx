@@ -4,7 +4,7 @@ export const Skeleton = ({ className = "", count = 1 }) => {
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={idx}
-          className={`bg-warm-grey/60 animate-pulse rounded-lg border border-warm-grey/40 ${className}`}
+          className={`bg-[#F3EBFC]/70 animate-pulse rounded-xl border border-[#EBE8F0] ${className}`}
         />
       ))}
     </>

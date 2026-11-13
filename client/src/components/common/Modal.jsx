@@ -9,6 +9,7 @@ export const Modal = ({
   subtitle,
   children,
   maxWidth = "max-w-lg",
+  className = "",
 }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -30,7 +31,7 @@ export const Modal = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-charcoal/40 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-[#172341]/60 backdrop-blur-xs transition-opacity"
           />
 
           {/* Dialog Container */}
@@ -39,18 +40,18 @@ export const Modal = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 10 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            className={`relative w-full ${maxWidth} bg-pure-white border border-warm-grey rounded-xl shadow-xl z-10 overflow-hidden text-charcoal`}
+            className={`relative w-full ${maxWidth} bg-white border border-[#EBE8F0] rounded-[18px] shadow-xl z-10 overflow-hidden text-[#191B2B] ${className}`}
           >
             {/* Header */}
-            <div className="flex items-start justify-between px-4 py-3 sm:px-5 sm:py-3.5 border-b border-warm-grey/70">
+            <div className="flex items-start justify-between px-4 py-3.5 border-b border-[#EBE8F0]">
               <div>
-                {title && <h3 className="text-sm sm:text-base font-semibold text-charcoal">{title}</h3>}
-                {subtitle && <p className="text-[11px] sm:text-xs text-stone-grey mt-0.5">{subtitle}</p>}
+                {title && <h3 className="text-[15px] font-semibold text-[#191B2B]">{title}</h3>}
+                {subtitle && <p className="text-[12px] text-[#686B7A] mt-0.5">{subtitle}</p>}
               </div>
 
               <button
                 onClick={onClose}
-                className="p-1 text-stone-grey hover:text-charcoal rounded-lg hover:bg-warm-ivory transition-colors -mr-1"
+                className="p-1 text-[#686B7A] hover:text-[#191B2B] rounded-lg hover:bg-[#FAF9FC] transition-colors -mr-1 cursor-pointer"
                 aria-label="Close dialog"
               >
                 <X className="w-4 h-4" />
@@ -58,7 +59,7 @@ export const Modal = ({
             </div>
 
             {/* Content */}
-            <div className="p-4 sm:p-5">{children}</div>
+            <div className="p-4">{children}</div>
           </motion.div>
         </div>
       )}

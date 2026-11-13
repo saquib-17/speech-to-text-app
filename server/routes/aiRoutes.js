@@ -2,6 +2,7 @@ import express from "express";
 import {
   summarizeTranscript,
   askTranscriptQuestion,
+  translateTranscriptHandler,
   getAIQuotaStatus,
 } from "../controllers/aiController.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
@@ -34,6 +35,13 @@ router.post("/summarize/:id", verifyTranscriptOwnership, summarizeTranscript);
  * @access Private (Owner only)
  */
 router.post("/ask/:id", verifyTranscriptOwnership, askTranscriptQuestion);
+
+/**
+ * @route POST /api/ai/translate/:id
+ * @desc Translate complete transcript into specified target language
+ * @access Private (Owner only)
+ */
+router.post("/translate/:id", verifyTranscriptOwnership, translateTranscriptHandler);
 
 export default router;
 

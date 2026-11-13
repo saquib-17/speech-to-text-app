@@ -3,40 +3,24 @@ import { useNavigate } from "react-router-dom";
 import {
   Mic,
   UploadCloud,
-  Radio,
   ShieldCheck,
-  Zap,
   Sparkles,
   Cpu,
-  Database,
-  ArrowRight,
-  CheckCircle2,
-  Lock,
-  UserPlus,
-  LogIn,
-  Clock,
-  AudioWaveform,
+  Play,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import TelemetryGrid from "../components/dashboard/TelemetryGrid";
 import QuickActions from "../components/dashboard/QuickActions";
 import RecentTranscripts from "../components/dashboard/RecentTranscripts";
 import Button from "../components/common/Button";
-import AuthModal from "../components/auth/AuthModal";
 import api from "../api/client";
 
 export const Dashboard = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated, requireAuth } = useAuth();
   const navigate = useNavigate();
 
   const [transcripts, setTranscripts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Auth Modal State for Protected Actions in Guest Mode
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState("login");
-  const [authModalTarget, setAuthModalTarget] = useState("/studio");
-  const [authModalTitle, setAuthModalTitle] = useState(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -62,18 +46,21 @@ export const Dashboard = () => {
     }
   };
 
-  const handleProtectedAction = (targetPath, mode = "login", title = null) => {
-    if (isAuthenticated) {
-      navigate(targetPath);
-    } else {
-      setAuthModalTarget(targetPath);
-      setAuthModalMode(mode);
-      setAuthModalTitle(title);
-      setAuthModalOpen(true);
-    }
+  const handleStartRecording = () => {
+    requireAuth(() => navigate("/studio?mode=record"), {
+      title: "Sign in to Record Live Audio",
+      subtitle: "Capture and transcribe audio with local Faster-Whisper",
+    });
   };
 
-  // Compute telemetry metrics for authenticated user
+  const handleUploadAudio = () => {
+    requireAuth(() => navigate("/studio?mode=upload"), {
+      title: "Sign in to Upload Audio",
+      subtitle: "Import MP3, WAV or M4A recordings for local transcription",
+    });
+  };
+
+  // Compute telemetry metrics
   const totalTranscripts = transcripts.length;
   const totalDuration = transcripts.reduce((acc, t) => {
     const meta = t.transcriptionMetadata || {};
@@ -81,300 +68,142 @@ export const Dashboard = () => {
     return acc + (meta.durationSeconds || audioMeta.durationSeconds || 0);
   }, 0);
 
-  const firstName = user?.name ? user.name.split(" ")[0] : "Creator";
-
   return (
-    <div className="space-y-3.5 sm:space-y-4 pb-6">
-      {/* Auth Modal for Guest Actions */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialMode={authModalMode}
-        title={authModalTitle}
-        onSuccess={() => {
-          if (authModalTarget) {
-            navigate(authModalTarget);
-          }
-        }}
-      />
+    <div className="space-y-5 pb-8">
+      {/* Reference Hero Stage: 240-260px Height Target */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#FFF6EE] via-[#FAF0FA] to-[#F5ECFC] border border-[#EBE8F0] p-6 sm:px-7 sm:py-6 shadow-xs min-h-[240px] flex items-center">
+        {/* Soft Background Radial Lighting */}
+        <div className="absolute top-0 right-1/4 w-72 h-72 bg-[#F07800]/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Editorial Hero Stage */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#FFFDF9] via-[#FAF4EA] to-[#F3E7D7] border border-[#E5D7C3] p-3.5 sm:p-4 shadow-2xs">
-        {/* Subtle Decorative Ambient Background */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-soft/10 rounded-full blur-3xl pointer-events-none -mr-12 -mt-12" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
-          {/* Left: Narrative & Status */}
-          <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-pure-white/95 border border-amber-brand/25 text-amber-brand text-xs font-medium shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-brand animate-pulse" />
+        <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6 w-full">
+          {/* Left: Headline, Badges & Actions */}
+          <div className="space-y-3 max-w-xl">
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/95 border border-[#EBE8F0] text-[#F07800] text-[11px] font-medium shadow-2xs">
+                <Cpu className="w-3 h-3 text-[#F07800]" />
                 <span>Faster-Whisper INT8</span>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-pure-white/80 border border-warm-grey text-stone-grey text-xs font-normal">
-                <ShieldCheck className="w-3 h-3 text-amber-brand" />
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/95 border border-[#EBE8F0] text-[#7138B8] text-[11px] font-medium shadow-2xs">
+                <ShieldCheck className="w-3 h-3 text-[#7138B8]" />
                 <span>Local Private Transcription</span>
               </div>
-
-              {!isAuthenticated && (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-pure-white/80 border border-warm-grey text-stone-grey text-xs font-normal">
-                  <Sparkles className="w-3 h-3 text-amber-brand" />
-                  <span>Gemini 3.8 Flash AI</span>
-                </div>
-              )}
             </div>
 
+            {/* Main Headline: 26px Target */}
             <div>
-              {isAuthenticated ? (
-                <>
-                  <h1 className="text-xl sm:text-[26px] font-serif font-medium text-charcoal tracking-tight leading-tight">
-                    Welcome back, <span className="italic font-normal text-amber-brand">{firstName}</span>.
-                  </h1>
-                  <p className="text-xs sm:text-[13px] text-stone-grey mt-0.5 leading-normal max-w-lg font-normal">
-                    Your sovereign speech intelligence studio is ready. Transcribe voice privately with Faster-Whisper and generate AI insights.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h1 className="text-xl sm:text-[26px] font-serif font-medium text-charcoal tracking-tight leading-tight">
-                    Speech Intelligence & <span className="italic font-normal text-amber-brand">Sovereign Audio</span> Workspace.
-                  </h1>
-                  <p className="text-xs sm:text-[13px] text-stone-grey mt-0.5 leading-normal max-w-xl font-normal">
-                    Transcribe audio locally with Faster-Whisper on CPU. Analyze conversations, extract action points, and ask questions with Gemini 3.8 Flash.
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Actions & Acoustic Waveform Visual */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-            {/* Mini Acoustic Waveform Badge (Desktop) */}
-            <div className="hidden xl:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-pure-white/85 border border-[#E3D3BE] shadow-2xs">
-              <div className="flex items-end h-4.5 gap-0.5">
-                {[30, 60, 95, 45, 80, 100, 70, 50, 85, 40].map((h, i) => (
-                  <span
-                    key={i}
-                    className="w-0.5 sm:w-1 rounded-full bg-amber-brand"
-                    style={{
-                      height: `${h}%`,
-                      opacity: 0.65 + (i % 3) * 0.15,
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="text-[11px] text-stone-grey leading-tight pl-2 border-l border-warm-grey">
-                <span className="block font-semibold text-charcoal text-xs">16 kHz Audio</span>
-                <span className="text-amber-brand text-[10px] font-mono">Local Stream</span>
-              </div>
+              <h1 className="text-[22px] sm:text-[26px] font-semibold text-[#191B2B] tracking-tight leading-tight">
+                Transcribe • Analyze • <span className="text-[#F07800]">Do More</span>
+              </h1>
+              <p className="text-[13px] sm:text-[14px] text-[#686B7A] mt-1.5 leading-normal">
+                Record or upload audio, get accurate transcripts with Faster-Whisper, and unlock AI-powered summaries, key points and answers.
+              </p>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
+            {/* Hero CTAs: 40px High */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <Button
                 variant="primary"
-                size="sm"
+                size="lg"
                 icon={Mic}
-                onClick={() => handleProtectedAction("/studio?mode=record", "login", "Sign in to record live audio")}
-                className="shadow-2xs text-xs font-semibold px-3.5 py-1.5"
+                onClick={handleStartRecording}
+                className="font-semibold shadow-xs"
               >
                 Start Recording
               </Button>
 
               <Button
                 variant="secondary"
-                size="sm"
+                size="lg"
                 icon={UploadCloud}
-                onClick={() => handleProtectedAction("/studio?mode=upload", "login", "Sign in to upload audio files")}
-                className="bg-pure-white/90 hover:bg-pure-white border-warm-grey text-charcoal text-xs font-medium shadow-2xs px-3.5 py-1.5"
+                onClick={handleUploadAudio}
+                className="font-semibold shadow-2xs"
               >
                 Upload Audio
               </Button>
             </div>
           </div>
+
+          {/* Right: Signature Speech & AI Illustration */}
+          <div className="relative flex items-center justify-center shrink-0 w-full sm:w-auto py-1">
+            {/* Orange Waveform lines */}
+            <div className="hidden sm:flex items-center gap-1 mr-2.5">
+              {[8, 16, 26, 12, 20, 30, 14, 24, 10, 18].map((h, i) => (
+                <span
+                  key={i}
+                  className="w-0.5 rounded-full bg-[#F07800]"
+                  style={{
+                    height: `${h}px`,
+                    opacity: 0.45 + (i % 3) * 0.25,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Stylized Microphone */}
+            <div className="relative flex items-center justify-center">
+              {/* Orange Glow */}
+              <div className="absolute inset-0 bg-[#F07800]/15 rounded-full blur-lg scale-110" />
+
+              {/* Stylized Microphone: Compact Proportions */}
+              <div className="relative w-14 h-22 sm:w-16 sm:h-24 rounded-2xl bg-gradient-to-b from-[#2B1B47] via-[#1E2945] to-[#172341] border-2 border-white/60 shadow-lg flex flex-col items-center justify-between p-1.5 z-10">
+                {/* Metallic Orange Ring Accent */}
+                <div className="w-full h-1 rounded-full bg-[#F07800] shadow-2xs" />
+
+                {/* Mesh pattern */}
+                <div className="w-9 h-10 sm:w-10 sm:h-11 rounded-xl bg-[#172341]/80 border border-white/20 flex flex-col items-center justify-center gap-1 p-0.5">
+                  <div className="w-full h-0.5 bg-white/20 rounded" />
+                  <div className="w-full h-0.5 bg-white/20 rounded" />
+                  <div className="w-full h-0.5 bg-white/20 rounded" />
+                </div>
+
+                {/* Microphone Stand Base */}
+                <div className="w-4 h-2.5 bg-[#172341] rounded-t border-t border-white/30" />
+              </div>
+            </div>
+
+            {/* Floating Transcript Card & AI Badge: Compact */}
+            <div className="hidden md:flex flex-col gap-1 ml-2.5 relative">
+              {/* AI Badge pill in Purple */}
+              <div className="self-end inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#7138B8] text-white text-[9.5px] font-semibold shadow-xs">
+                <span>AI</span>
+                <Sparkles className="w-2.5 h-2.5 text-[#FF9B24]" />
+              </div>
+
+              {/* Floating Card */}
+              <div className="w-32 p-2 rounded-xl bg-white/95 border border-[#EBE8F0] shadow-md space-y-1 backdrop-blur-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4.5 h-4.5 rounded-full bg-[#7138B8] text-white flex items-center justify-center shadow-2xs">
+                    <Play className="w-2 h-2 ml-0.2 fill-current" />
+                  </div>
+                  <div className="space-y-1 flex-1">
+                    <div className="h-1 rounded-full bg-[#EBE8F0] w-3/4" />
+                    <div className="h-1 rounded-full bg-[#FFF1E2] w-1/2" />
+                  </div>
+                </div>
+                <div className="h-1 rounded-full bg-[#EBE8F0] w-full" />
+                <div className="h-1 rounded-full bg-[#EBE8F0] w-4/5" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main Workspace Body */}
-      {isAuthenticated ? (
-        <>
-          {/* Authenticated Telemetry Grid */}
-          <TelemetryGrid
-            totalTranscripts={totalTranscripts}
-            totalDurationSeconds={totalDuration}
-          />
+      {/* Telemetry Statistics Row */}
+      <TelemetryGrid
+        totalTranscripts={totalTranscripts}
+        totalDurationSeconds={totalDuration}
+      />
 
-          {/* Quick Actions */}
-          <QuickActions />
+      {/* Quick Workflows */}
+      <QuickActions />
 
-          {/* Recent Transcripts */}
-          <RecentTranscripts
-            transcripts={transcripts}
-            isLoading={isLoading}
-          />
-        </>
-      ) : (
-        <>
-          {/* Guest Feature Architecture Showcase */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey shadow-2xs space-y-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-brand-light border border-amber-brand/25 flex items-center justify-center text-amber-brand">
-                <Cpu className="w-4 h-4" />
-              </div>
-              <h3 className="text-xs sm:text-sm font-semibold text-charcoal">
-                Faster-Whisper INT8 Inference
-              </h3>
-              <p className="text-xs text-stone-grey leading-relaxed">
-                Processes speech locally on your computer with zero per-minute audio charges and full conversational privacy.
-              </p>
-            </div>
-
-            <div className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey shadow-2xs space-y-2">
-              <div className="w-8 h-8 rounded-lg bg-[#FAF4EA] border border-amber-brand/20 flex items-center justify-center text-amber-brand">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <h3 className="text-xs sm:text-sm font-semibold text-charcoal">
-                Gemini 3.8 Flash Intelligence
-              </h3>
-              <p className="text-xs text-stone-grey leading-relaxed">
-                Generates executive summaries, key bullet points, and answers questions with context-aware AI retrieval.
-              </p>
-            </div>
-
-            <div className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey shadow-2xs space-y-2">
-              <div className="w-8 h-8 rounded-lg bg-warm-ivory border border-warm-grey flex items-center justify-center text-charcoal">
-                <Database className="w-4 h-4 text-amber-brand" />
-              </div>
-              <h3 className="text-xs sm:text-sm font-semibold text-charcoal">
-                Persistent MongoDB Storage
-              </h3>
-              <p className="text-xs text-stone-grey leading-relaxed">
-                Your transcripts and account are safely persisted across restarts with dedicated user data isolation.
-              </p>
-            </div>
-          </div>
-
-          {/* Public Quick Workflows Grid */}
-          <div>
-            <div className="flex items-center justify-between mb-2 px-0.5">
-              <h3 className="text-xs sm:text-sm font-semibold text-charcoal">
-                Explore Studio Capabilities
-              </h3>
-              <span className="text-xs text-stone-grey">
-                Click any action to access studio
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div
-                onClick={() => handleProtectedAction("/studio?mode=record", "login", "Sign in to record audio")}
-                className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey hover:border-amber-brand/50 hover:shadow-xs hover:-translate-y-0.5 cursor-pointer transition-all duration-200 flex flex-col justify-between group shadow-2xs"
-              >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center border shadow-2xs shrink-0 bg-amber-brand-light text-amber-brand border-amber-brand/25">
-                    <Mic className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex items-center gap-1 text-xs font-medium text-stone-grey group-hover:text-amber-brand transition-colors">
-                    <span>Open Studio</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-semibold text-charcoal group-hover:text-amber-brand transition-colors">
-                    Live Audio Recording
-                  </h4>
-                  <p className="text-xs text-stone-grey mt-0.5 leading-normal">
-                    Capture crystal clear voice with real-time waveform visualization.
-                  </p>
-                </div>
-              </div>
-
-              <div
-                onClick={() => handleProtectedAction("/studio?mode=upload", "login", "Sign in to upload audio")}
-                className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey hover:border-amber-brand/50 hover:shadow-xs hover:-translate-y-0.5 cursor-pointer transition-all duration-200 flex flex-col justify-between group shadow-2xs"
-              >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center border shadow-2xs shrink-0 bg-warm-ivory text-charcoal border-warm-grey">
-                    <UploadCloud className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex items-center gap-1 text-xs font-medium text-stone-grey group-hover:text-amber-brand transition-colors">
-                    <span>Upload Audio</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-semibold text-charcoal group-hover:text-amber-brand transition-colors">
-                    Audio File Upload
-                  </h4>
-                  <p className="text-xs text-stone-grey mt-0.5 leading-normal">
-                    Import MP3, WAV, M4A, or FLAC recordings for fast transcription.
-                  </p>
-                </div>
-              </div>
-
-              <div
-                onClick={() => handleProtectedAction("/history", "login", "Sign in to view transcripts")}
-                className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey hover:border-amber-brand/50 hover:shadow-xs hover:-translate-y-0.5 cursor-pointer transition-all duration-200 flex flex-col justify-between group shadow-2xs"
-              >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center border shadow-2xs shrink-0 bg-[#FAF4EA] text-amber-brand border-amber-brand/20">
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex items-center gap-1 text-xs font-medium text-stone-grey group-hover:text-amber-brand transition-colors">
-                    <span>Explore Library</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-semibold text-charcoal group-hover:text-amber-brand transition-colors">
-                    Transcript Archive & Q&A
-                  </h4>
-                  <p className="text-xs text-stone-grey mt-0.5 leading-normal">
-                    Interactive audio-synced editor and contextual AI chat.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Guest Sample Preview & Call to Action */}
-          <div className="rounded-xl bg-pure-white border border-warm-grey overflow-hidden shadow-2xs p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-semibold text-charcoal">
-                  Ready to Transcribe Voice Notes & Meetings?
-                </span>
-              </div>
-              <p className="text-xs text-stone-grey max-w-lg leading-relaxed">
-                Sign in to your account or create a new profile to record voice, persist transcripts, and ask questions with Gemini 3.8 Flash.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2.5 shrink-0">
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={LogIn}
-                onClick={() => handleProtectedAction("/dashboard", "login", "Sign In to Your Workspace")}
-                className="text-xs font-semibold"
-              >
-                Sign In
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                icon={UserPlus}
-                onClick={() => handleProtectedAction("/studio", "register", "Create Your Free Account")}
-                className="text-xs font-semibold shadow-xs"
-              >
-                Create Account
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Recent Transcripts & System Status */}
+      <RecentTranscripts
+        transcripts={transcripts}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

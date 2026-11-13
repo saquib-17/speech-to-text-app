@@ -40,7 +40,7 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full">
         <AnimatePresence>
           {toasts.map((item) => (
             <motion.div
@@ -50,23 +50,23 @@ export const ToastProvider = ({ children }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.94 }}
               transition={{ duration: 0.18 }}
-              className="pointer-events-auto flex items-start gap-3 p-4 rounded-xl bg-pure-white border border-warm-grey shadow-lg text-charcoal"
+              className="pointer-events-auto flex items-start gap-3 p-4 rounded-2xl bg-white border border-[#EBE8F0] shadow-lg text-[#191B2B]"
             >
               <div className="mt-0.5 shrink-0">
-                {item.type === "success" && <CheckCircle2 className="w-5 h-5 text-amber-brand" />}
-                {item.type === "error" && <AlertCircle className="w-5 h-5 text-red-600" />}
-                {item.type === "info" && <Info className="w-5 h-5 text-amber-soft" />}
-                {item.type === "loading" && <Loader2 className="w-5 h-5 text-amber-brand animate-spin" />}
+                {item.type === "success" && <CheckCircle2 className="w-5 h-5 text-[#269B62]" />}
+                {item.type === "error" && <AlertCircle className="w-5 h-5 text-[#DC4545]" />}
+                {item.type === "info" && <Info className="w-5 h-5 text-[#7138B8]" />}
+                {item.type === "loading" && <Loader2 className="w-5 h-5 text-[#F07800] animate-spin" />}
               </div>
 
               <div className="flex-1 min-w-0">
-                {item.title && <h5 className="text-xs font-semibold uppercase tracking-wider text-charcoal">{item.title}</h5>}
-                <p className="text-sm text-stone-grey mt-0.5 leading-snug">{item.message}</p>
+                {item.title && <h5 className="text-[11px] font-bold uppercase tracking-wider text-[#191B2B]">{item.title}</h5>}
+                <p className="text-xs text-[#686B7A] mt-0.5 leading-snug">{item.message}</p>
               </div>
 
               <button
                 onClick={() => removeToast(item.id)}
-                className="shrink-0 p-1 text-stone-grey hover:text-charcoal rounded-lg hover:bg-warm-ivory transition-colors"
+                className="shrink-0 p-1 text-[#686B7A] hover:text-[#191B2B] rounded-lg hover:bg-[#FAF9FC] transition-colors cursor-pointer"
                 aria-label="Close notification"
               >
                 <X className="w-4 h-4" />

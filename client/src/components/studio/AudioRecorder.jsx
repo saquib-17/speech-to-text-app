@@ -11,12 +11,14 @@ import {
 } from "lucide-react";
 import WaveformCanvas from "./WaveformCanvas";
 import useAudioRecorder from "../../hooks/useAudioRecorder";
+import { useAuth } from "../../context/AuthContext";
 import Button from "../common/Button";
 import Input from "../common/Input";
 
 export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState("auto");
+  const { requireAuth } = useAuth();
 
   const {
     recordingState,
@@ -35,6 +37,18 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
     resetRecording,
   } = useAudioRecorder();
 
+  const handleStartRecord = () => {
+    requireAuth(
+      () => {
+        startRecording();
+      },
+      {
+        title: "Sign In to Record Audio",
+        subtitle: "Capture and transcribe live voice with local Faster-Whisper",
+      }
+    );
+  };
+
   // Format MM:SS
   const formatTime = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -44,13 +58,21 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
 
   const handleTranscribeClick = () => {
     if (!audioBlob) return;
-    onTranscribe({
-      file: audioBlob,
-      filename: `recording_${Date.now()}.webm`,
-      title: title.trim() || `Voice Recording ${new Date().toLocaleDateString()}`,
-      language,
-      source: "recording",
-    });
+    requireAuth(
+      () => {
+        onTranscribe({
+          file: audioBlob,
+          filename: `recording_${Date.now()}.webm`,
+          title: title.trim() || `Voice Recording ${new Date().toLocaleDateString()}`,
+          language,
+          source: "recording",
+        });
+      },
+      {
+        title: "Sign In to Transcribe Audio",
+        subtitle: "Process your voice recording with local Faster-Whisper",
+      }
+    );
   };
 
   const handleReset = () => {
@@ -60,29 +82,28 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
 
   return (
     <div className="space-y-4">
-      {/* Microphone Capture & Status Chamber (Compact) */}
-      <div className="flex flex-col items-center justify-center py-5 sm:py-6 px-4 rounded-xl bg-pure-white border border-warm-grey shadow-2xs relative overflow-hidden">
+      {/* Microphone Capture & Status Chamber */}
+      <div className="flex flex-col items-center justify-center py-5 sm:py-6 px-4 rounded-xl bg-white border border-[#EBE8F0] shadow-2xs relative overflow-hidden">
         {/* Subtle dot matrix background */}
-        <div className="absolute inset-0 amber-grid-bg opacity-70 pointer-events-none" />
+        <div className="absolute inset-0 speech-grid-bg opacity-70 pointer-events-none" />
 
         {/* Live Timer Indicator */}
-        <div className="relative z-10 flex flex-col items-center mb-4">
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-warm-ivory border border-warm-grey mb-2 shadow-2xs">
+        <div className="relative z-10 flex flex-col items-center mb-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF9FC] border border-[#EBE8F0] mb-1.5 shadow-2xs">
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isRecording
-                  ? "bg-amber-brand animate-ping"
-                  : isPaused
-                  ? "bg-amber-soft"
-                  : "bg-amber-brand"
-              }`}
+              className={`w-2 h-2 rounded-full ${isRecording
+                ? "bg-[#DC4545] animate-ping"
+                : isPaused
+                  ? "bg-[#F07800]"
+                  : "bg-[#7138B8]"
+                }`}
             />
-            <span className="text-xs text-charcoal font-medium">
+            <span className="text-[11px] text-[#191B2B] font-medium">
               {isRecording ? "Live Recording" : isPaused ? "Recording Paused" : isStopped ? "Audio Captured" : "Ready to Record"}
             </span>
           </div>
 
-          <span className="text-3xl sm:text-4xl font-mono font-bold tracking-tight text-charcoal select-none">
+          <span className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-[#191B2B] select-none">
             {formatTime(durationSeconds)}
           </span>
         </div>
@@ -97,12 +118,12 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
         </div>
 
         {/* Controls Container */}
-        <div className="relative z-10 flex items-center justify-center gap-3">
+        <div className="relative z-10 flex items-center justify-center gap-2.5">
           {recordingState === "idle" && (
             <button
-              onClick={startRecording}
+              onClick={handleStartRecord}
               disabled={isTranscribing}
-              className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-amber-brand hover:bg-amber-brand-hover active:scale-95 text-pure-white flex items-center justify-center shadow-md shadow-amber-brand/25 transition-all border-2 border-amber-brand cursor-pointer"
+              className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#F07800] hover:bg-[#D96B00] active:scale-95 text-white flex items-center justify-center shadow-md shadow-[#F07800]/25 transition-all border-2 border-white cursor-pointer"
               aria-label="Start recording"
             >
               <Mic className="w-6 h-6" />
@@ -113,7 +134,7 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
             <>
               <button
                 onClick={pauseRecording}
-                className="w-10 h-10 rounded-full bg-warm-ivory hover:bg-warm-ivory-dark text-amber-brand border border-warm-grey flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                className="w-10 h-10 rounded-full bg-[#FAF9FC] hover:bg-[#FFF1E2] text-[#F07800] border border-[#EBE8F0] flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                 title="Pause recording"
                 aria-label="Pause recording"
               >
@@ -122,11 +143,11 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
 
               <button
                 onClick={stopRecording}
-                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-red-600 hover:bg-red-700 text-pure-white flex items-center justify-center shadow-md shadow-red-600/30 transition-all border border-red-500 cursor-pointer active:scale-95"
+                className="w-13 h-13 rounded-full bg-[#DC4545] hover:bg-[#C53535] text-white flex items-center justify-center shadow-md shadow-[#DC4545]/30 transition-all border border-red-500 cursor-pointer active:scale-95"
                 title="Stop recording"
                 aria-label="Stop recording"
               >
-                <Square className="w-5 h-5 fill-current" />
+                <Square className="w-4.5 h-4.5 fill-current" />
               </button>
             </>
           )}
@@ -135,7 +156,7 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
             <>
               <button
                 onClick={resumeRecording}
-                className="w-10 h-10 rounded-full bg-amber-brand-light hover:bg-amber-brand/15 text-amber-brand border border-amber-brand/25 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                className="w-10 h-10 rounded-full bg-[#FFF1E2] hover:bg-[#FFE6CC] text-[#F07800] border border-[#F07800]/30 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                 title="Resume recording"
                 aria-label="Resume recording"
               >
@@ -144,11 +165,11 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
 
               <button
                 onClick={stopRecording}
-                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-red-600 hover:bg-red-700 text-pure-white flex items-center justify-center shadow-md shadow-red-600/30 transition-all border border-red-500 cursor-pointer active:scale-95"
+                className="w-13 h-13 rounded-full bg-[#DC4545] hover:bg-[#C53535] text-white flex items-center justify-center shadow-md shadow-[#DC4545]/30 transition-all border border-red-500 cursor-pointer active:scale-95"
                 title="Stop recording"
                 aria-label="Stop recording"
               >
-                <Square className="w-5 h-5 fill-current" />
+                <Square className="w-4.5 h-4.5 fill-current" />
               </button>
             </>
           )}
@@ -168,8 +189,8 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
 
         {/* Error message */}
         {error && (
-          <div className="mt-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 max-w-md">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+          <div className="mt-2.5 p-2 rounded-xl bg-[#FDECEC] border border-[#F8BDBD] text-[#DC4545] text-[11.5px] flex items-center gap-2 max-w-md">
+            <AlertCircle className="w-4 h-4 shrink-0 text-[#DC4545]" />
             <span>{error}</span>
           </div>
         )}
@@ -177,15 +198,15 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
 
       {/* Captured Audio Preview & Transcription Trigger */}
       {isStopped && audioUrl && (
-        <div className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between pb-2.5 border-b border-warm-grey/70">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-amber-brand-light border border-amber-brand/20 flex items-center justify-center text-amber-brand">
-                <FileAudio className="w-4 h-4" />
+        <div className="p-4 rounded-xl bg-white border border-[#EBE8F0] space-y-3.5 shadow-2xs">
+          <div className="flex items-center justify-between pb-3 border-b border-[#EBE8F0]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-[38px] h-[38px] rounded-lg bg-[#FFF1E2] border border-[#F07800]/20 flex items-center justify-center text-[#F07800] shrink-0">
+                <FileAudio className="w-[18px] h-[18px]" />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-charcoal">Captured Audio Ready</h4>
-                <p className="text-[10px] sm:text-[11px] text-stone-grey font-mono">
+                <h3 className="text-[14px] font-semibold text-[#191B2B]">Captured Audio Ready</h3>
+                <p className="text-[12px] text-[#686B7A] font-mono">
                   Duration: {formatTime(durationSeconds)} • Size: {Math.round(audioBlob.size / 1024)} KB
                 </p>
               </div>
@@ -194,7 +215,7 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
             <audio src={audioUrl} controls className="h-8 max-w-xs" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
               <Input
                 label="Transcript Title"
@@ -206,16 +227,16 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-charcoal block mb-1">
+              <label className="text-[12px] font-medium text-[#191B2B] block mb-1">
                 Language Hint
               </label>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 disabled={isTranscribing}
-                className="w-full bg-pure-white border border-warm-grey rounded-lg py-1.5 sm:py-2 px-2.5 text-xs sm:text-sm text-charcoal focus:outline-none focus:border-amber-brand focus:ring-2 focus:ring-amber-brand/20 shadow-2xs"
+                className="w-full h-[38px] bg-white border border-[#EBE8F0] hover:border-[#DDD8E6] focus:border-[#F07800] focus:ring-2 focus:ring-[#F07800]/20 rounded-xl py-1.5 px-3 text-xs sm:text-[13px] text-[#191B2B] focus:outline-none shadow-2xs"
               >
-                <option value="auto">Auto-detect (Whisper)</option>
+                <option value="auto">Auto-detect (Faster-Whisper)</option>
                 <option value="en">English (en)</option>
                 <option value="es">Spanish (es)</option>
                 <option value="fr">French (fr)</option>
@@ -225,14 +246,14 @@ export const AudioRecorder = ({ onTranscribe, isTranscribing = false }) => {
             </div>
           </div>
 
-          <div className="pt-1 flex justify-end">
+          <div className="pt-2 flex justify-end">
             <Button
               variant="primary"
               icon={Sparkles}
               size="md"
               isLoading={isTranscribing}
               onClick={handleTranscribeClick}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto font-semibold shadow-xs"
             >
               Transcribe with Faster-Whisper
             </Button>

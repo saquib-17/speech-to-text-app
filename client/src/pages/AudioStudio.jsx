@@ -90,36 +90,35 @@ export const AudioStudio = () => {
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
       {/* Studio Header Banner */}
-      <div className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="p-4 rounded-xl bg-white border border-[#EBE8F0] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <Radio className="w-4 h-4 text-amber-brand" />
-            <h2 className="text-base sm:text-lg font-bold tracking-tight text-charcoal">Audio Studio</h2>
+            <Radio className="w-4 h-4 text-[#F07800]" />
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#191B2B]">Audio Studio</h2>
             <Badge variant="completed" size="sm">
               Offline INT8
             </Badge>
           </div>
-          <p className="text-xs text-stone-grey">
-            High-fidelity speech capture with real-time waveform analysis and offline Whisper processing.
+          <p className="text-[12px] text-[#686B7A]">
+            High-fidelity speech capture with real-time waveform analysis and offline Faster-Whisper processing.
           </p>
         </div>
 
         {/* Studio Specs Indicator */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-warm-ivory border border-warm-grey text-xs text-stone-grey shrink-0 self-start sm:self-center font-medium">
-          <Cpu className="w-3.5 h-3.5 text-amber-brand" />
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF1E2] border border-[#F07800]/20 text-[11px] text-[#F07800] shrink-0 self-start sm:self-center font-medium">
+          <Cpu className="w-3.5 h-3.5 text-[#F07800]" />
           <span>Faster-Whisper • 16 kHz</span>
         </div>
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className="flex p-1 rounded-lg bg-pure-white border border-warm-grey max-w-sm mx-auto shadow-2xs">
+      <div className="flex p-0.5 rounded-full bg-white border border-[#EBE8F0] max-w-xs mx-auto shadow-2xs">
         <button
           onClick={() => switchMode("record")}
-          className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            activeMode === "record"
-              ? "bg-amber-brand text-pure-white shadow-2xs"
-              : "text-stone-grey hover:text-charcoal"
-          }`}
+          className={`flex-1 h-[32px] px-3 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeMode === "record"
+            ? "bg-[#F07800] text-white shadow-xs"
+            : "text-[#686B7A] hover:text-[#191B2B]"
+            }`}
         >
           <Mic className="w-3.5 h-3.5" />
           <span>Record Audio</span>
@@ -127,11 +126,10 @@ export const AudioStudio = () => {
 
         <button
           onClick={() => switchMode("upload")}
-          className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            activeMode === "upload"
-              ? "bg-amber-brand text-pure-white shadow-2xs"
-              : "text-stone-grey hover:text-charcoal"
-          }`}
+          className={`flex-1 h-[32px] px-3 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeMode === "upload"
+            ? "bg-[#F07800] text-white shadow-xs"
+            : "text-[#686B7A] hover:text-[#191B2B]"
+            }`}
         >
           <UploadCloud className="w-3.5 h-3.5" />
           <span>Upload Audio</span>

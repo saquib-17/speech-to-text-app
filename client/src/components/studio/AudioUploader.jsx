@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { UploadCloud, FileAudio, X, Sparkles } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import Button from "../common/Button";
 import Input from "../common/Input";
 import Badge from "../common/Badge";
@@ -14,8 +15,21 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState("auto");
   const [validationError, setValidationError] = useState(null);
+  const { requireAuth } = useAuth();
 
   const fileInputRef = useRef(null);
+
+  const handleBrowseClick = () => {
+    requireAuth(
+      () => {
+        fileInputRef.current?.click();
+      },
+      {
+        title: "Sign In to Upload Audio",
+        subtitle: "Select and transcribe audio files locally with Faster-Whisper",
+      }
+    );
+  };
 
   const handleFile = (file) => {
     setValidationError(null);
@@ -86,13 +100,21 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
 
   const handleTranscribeClick = () => {
     if (!selectedFile) return;
-    onTranscribe({
-      file: selectedFile,
-      filename: selectedFile.name,
-      title: title.trim() || selectedFile.name,
-      language,
-      source: "upload",
-    });
+    requireAuth(
+      () => {
+        onTranscribe({
+          file: selectedFile,
+          filename: selectedFile.name,
+          title: title.trim() || selectedFile.name,
+          language,
+          source: "upload",
+        });
+      },
+      {
+        title: "Sign In to Transcribe Audio",
+        subtitle: "Process audio files locally with Faster-Whisper",
+      }
+    );
   };
 
   return (
@@ -110,33 +132,33 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
         }}
       />
 
-      {/* Drop Zone (Compact) */}
+      {/* Drop Zone */}
       {!selectedFile ? (
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex flex-col items-center justify-center p-5 sm:p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer shadow-2xs ${
+          onClick={handleBrowseClick}
+          className={`flex flex-col items-center justify-center p-5 sm:p-7 rounded-xl border-2 border-dashed transition-all cursor-pointer shadow-2xs ${
             isDragging
-              ? "border-amber-brand bg-amber-brand-light/50 scale-[1.005]"
-              : "border-warm-grey hover:border-amber-brand bg-pure-white"
+              ? "border-[#F07800] bg-[#FFF1E2]/50 scale-[1.005]"
+              : "border-[#EBE8F0] hover:border-[#F07800] bg-white"
           }`}
         >
-          <div className="w-10 h-10 rounded-xl bg-amber-brand-light border border-amber-brand/20 flex items-center justify-center text-amber-brand mb-3 shadow-2xs">
-            <UploadCloud className="w-5 h-5" />
+          <div className="w-[38px] h-[38px] rounded-xl bg-[#FFF1E2] border border-[#F07800]/20 flex items-center justify-center text-[#F07800] mb-2.5 shadow-2xs">
+            <UploadCloud className="w-[18px] h-[18px]" />
           </div>
 
-          <h3 className="text-xs sm:text-sm font-semibold text-charcoal text-center">
-            Drop your audio file here or <span className="text-amber-brand underline underline-offset-2">browse</span>
+          <h3 className="text-xs sm:text-[14px] font-semibold text-[#191B2B] text-center">
+            Drop your audio file here or <span className="text-[#F07800] underline underline-offset-2">browse</span>
           </h3>
-          <p className="text-[11px] text-stone-grey mt-0.5 text-center">
+          <p className="text-[12px] text-[#686B7A] mt-0.5 text-center">
             Supports MP3, WAV, WebM, M4A, AAC, OGG up to 25 MB
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-1 mt-3">
             {["MP3", "WAV", "WEBM", "M4A", "AAC", "OGG"].map((fmt) => (
-              <Badge key={fmt} variant="neutral" size="sm" className="font-mono text-[10px]">
+              <Badge key={fmt} variant="neutral" size="sm" className="font-mono text-[9.5px]">
                 {fmt}
               </Badge>
             ))}
@@ -144,15 +166,15 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
         </div>
       ) : (
         /* Selected File Card */
-        <div className="p-3.5 sm:p-4 rounded-xl bg-pure-white border border-warm-grey space-y-3 shadow-2xs">
-          <div className="flex items-start justify-between pb-2.5 border-b border-warm-grey/70">
+        <div className="p-4 rounded-xl bg-white border border-[#EBE8F0] space-y-3.5 shadow-2xs">
+          <div className="flex items-start justify-between pb-2.5 border-b border-[#EBE8F0]">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-amber-brand-light border border-amber-brand/20 flex items-center justify-center text-amber-brand shrink-0">
-                <FileAudio className="w-4 h-4" />
+              <div className="w-[38px] h-[38px] rounded-xl bg-[#FFF1E2] border border-[#F07800]/20 flex items-center justify-center text-[#F07800] shrink-0">
+                <FileAudio className="w-[18px] h-[18px]" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-xs sm:text-sm font-semibold text-charcoal truncate">{selectedFile.name}</h4>
-                <p className="text-[10px] sm:text-[11px] text-stone-grey font-mono">
+                <h4 className="text-xs sm:text-[14px] font-semibold text-[#191B2B] truncate">{selectedFile.name}</h4>
+                <p className="text-[11px] text-[#686B7A] font-mono">
                   {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • {selectedFile.type || "audio"}
                 </p>
               </div>
@@ -161,23 +183,23 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
             <button
               onClick={handleClear}
               disabled={isTranscribing}
-              className="p-1 text-stone-grey hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-1 text-[#686B7A] hover:text-[#DC4545] hover:bg-[#FDECEC] rounded-lg transition-colors cursor-pointer"
               aria-label="Remove selected file"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Audio preview player */}
           {previewUrl && (
-            <div className="p-2 rounded-lg bg-warm-ivory border border-warm-grey flex items-center justify-between">
-              <span className="text-[11px] font-mono text-charcoal pl-1 font-medium">Playback Preview:</span>
+            <div className="p-2.5 rounded-xl bg-[#FAF9FC] border border-[#EBE8F0] flex items-center justify-between">
+              <span className="text-[11px] font-mono text-[#191B2B] pl-1 font-medium">Playback Preview:</span>
               <audio src={previewUrl} controls className="h-7 max-w-xs" />
             </div>
           )}
 
           {/* Title and Language Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
               <Input
                 label="Transcript Title"
@@ -189,16 +211,16 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-charcoal block mb-1">
+              <label className="text-[12px] font-medium text-[#191B2B] block mb-1">
                 Language Hint
               </label>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 disabled={isTranscribing}
-                className="w-full bg-pure-white border border-warm-grey rounded-lg py-1.5 sm:py-2 px-2.5 text-xs sm:text-sm text-charcoal focus:outline-none focus:border-amber-brand focus:ring-2 focus:ring-amber-brand/20 shadow-2xs"
+                className="w-full h-[38px] bg-white border border-[#EBE8F0] hover:border-[#DDD8E6] focus:border-[#F07800] focus:ring-2 focus:ring-[#F07800]/20 rounded-xl py-1.5 px-3 text-xs sm:text-[13px] text-[#191B2B] focus:outline-none shadow-2xs"
               >
-                <option value="auto">Auto-detect (Whisper)</option>
+                <option value="auto">Auto-detect (Faster-Whisper)</option>
                 <option value="en">English (en)</option>
                 <option value="es">Spanish (es)</option>
                 <option value="fr">French (fr)</option>
@@ -216,7 +238,7 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
               size="md"
               isLoading={isTranscribing}
               onClick={handleTranscribeClick}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto font-semibold shadow-xs"
             >
               Transcribe with Faster-Whisper
             </Button>
@@ -226,8 +248,8 @@ export const AudioUploader = ({ onTranscribe, isTranscribing = false }) => {
 
       {/* Validation Error */}
       {validationError && (
-        <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-          <X className="w-3.5 h-3.5 shrink-0 text-red-500" />
+        <div className="p-2.5 rounded-xl bg-[#FDECEC] border border-[#F8BDBD] text-[#DC4545] text-xs flex items-center gap-2">
+          <X className="w-4 h-4 shrink-0 text-[#DC4545]" />
           <span>{validationError}</span>
         </div>
       )}

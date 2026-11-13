@@ -5,8 +5,8 @@ export const WaveformCanvas = ({
   isRecording = false,
   isPaused = false,
   className = "",
-  barColor = "#C87932",
-  activeColor = "#E89548",
+  barColor = "#F07800",
+  activeColor = "#7138B8",
 }) => {
   const canvasRef = useRef(null);
   const animationFrameIdRef = useRef(null);
@@ -38,7 +38,7 @@ export const WaveformCanvas = ({
       ctx.clearRect(0, 0, width, height);
 
       // Draw subtle horizontal center line
-      ctx.strokeStyle = "#E7E0D6";
+      ctx.strokeStyle = "#EBE8F0";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, height / 2);
@@ -62,11 +62,11 @@ export const WaveformCanvas = ({
           const x = i * (barWidth + barGap);
           const y = (height - barHeight) / 2;
 
-          // Gradient color: Royal Amber base to Soft Amber peak
+          // Gradient color: Primary Orange base to Purple peak
           const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-          gradient.addColorStop(0, percent > 0.4 ? activeColor : barColor);
+          gradient.addColorStop(0, percent > 0.4 ? activeColor : "#FF9B24");
           gradient.addColorStop(0.5, barColor);
-          gradient.addColorStop(1, "rgba(200, 121, 50, 0.45)");
+          gradient.addColorStop(1, "rgba(240, 120, 0, 0.45)");
 
           ctx.fillStyle = gradient;
           ctx.beginPath();
@@ -85,8 +85,8 @@ export const WaveformCanvas = ({
           const y = (height - barHeight) / 2;
 
           ctx.fillStyle = isPaused
-            ? "rgba(232, 149, 72, 0.45)" // Soft amber for paused
-            : "rgba(200, 121, 50, 0.15)"; // Royal amber idle baseline
+            ? "rgba(113, 56, 184, 0.5)" // Purple for paused
+            : "rgba(240, 120, 0, 0.18)"; // Orange idle baseline
           ctx.beginPath();
           ctx.roundRect(x, y, barWidth, barHeight, 2);
           ctx.fill();
@@ -106,12 +106,10 @@ export const WaveformCanvas = ({
   }, [analyser, isRecording, isPaused, barColor, activeColor]);
 
   return (
-    <div className={`relative w-full h-20 sm:h-24 overflow-hidden rounded-lg bg-pure-white border border-warm-grey shadow-2xs ${className}`}>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full block"
-      />
-    </div>
+    <canvas
+      ref={canvasRef}
+      className={`w-full h-16 sm:h-18 rounded-xl bg-[#FAF9FC] border border-[#EBE8F0] shadow-2xs ${className}`}
+    />
   );
 };
 

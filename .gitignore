@@ -14,3 +14,4 @@ build/
 server/data/
 *.log
 
+server/tests/ai.test.js
